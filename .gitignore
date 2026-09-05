@@ -1,0 +1,36 @@
+# ==== Python / Django (backend/) ====
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+env/
+.venv/
+backend/staticfiles/
+backend/media/
+db.sqlite3
+*.sqlite3
+
+# ==== Node / React Native (mobile/) ====
+node_modules/
+mobile/android/.gradle/
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/local.properties
+mobile/ios/Pods/
+mobile/ios/build/
+*.hprof
+.cxx/
+
+# ==== Secrets / env ====
+.env
+.env.*
+!.env.example
+
+# ==== Editors / OS ====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-error.log*
