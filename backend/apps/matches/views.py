@@ -1,3 +1,42 @@
-from django.shortcuts import render
+from datetime import timedelta
 
-# Create your views here.
+from django.utils import timezone
+from rest_framework import generics, permissions
+
+from .models import Match
+from .serializers import MatchSerializer
+
+
+class MatchListView(generics.ListAPIView):
+    """
+    Play screen. Query params:
+      ?game=cs           - filter by Game.slug
+      ?range=today|tomorrow|week   - filter by start_time
+    """
+
+    serializer_class = MatchSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Match.objects.select_related("tournament__game", "team_a", "team_b").order_by("start_time")
+
+        game_slug = self.request.query_params.get("game")
+        if game_slug:
+            qs = qs.filter(tournament__game__slug=game_slug)
+
+        date_range = self.request.query_params.get("range")
+        today = timezone.localdate()
+        if date_range == "today":
+            qs = qs.filter(start_time__date=today)
+        elif date_range == "tomorrow":
+            qs = qs.filter(start_time__date=today + timedelta(days=1))
+        elif date_range == "week":
+            qs = qs.filter(start_time__date__range=(today, today + timedelta(days=7)))
+
+        return qs
+
+
+class MatchDetailView(generics.RetrieveAPIView):
+    queryset = Match.objects.select_related("tournament__game", "team_a", "team_b")
+    serializer_class = MatchSerializer
+    permission_classes = [permissions.IsAuthenticated]
