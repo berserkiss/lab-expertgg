@@ -63,14 +63,14 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16 },
-  title: { color: colors.text, fontSize: 28, fontFamily: fonts.bold },
+  title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16, paddingBottom: 24 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: colors.navBackground,
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 20,
     paddingHorizontal: 16,
     marginBottom: 12,
   },
