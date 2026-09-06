@@ -46,34 +46,39 @@ export default function SignInScreen() {
   return (
     <AuthBackground style={styles.container}>
       <View style={styles.logo}>
-        <Logo size={44} />
+        <Logo size={60} />
       </View>
-      <TextInput
-        style={[styles.input, errors.email && styles.inputError]}
-        placeholder="Email"
-        placeholderTextColor={colors.textMuted}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={text => {
-          setEmail(text);
-          if (errors.email || errors.general) setErrors(prev => ({ ...prev, email: undefined, general: undefined }));
-        }}
-      />
-      {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
 
-      <TextInput
-        style={[styles.input, errors.password && styles.inputError]}
-        placeholder="Password"
-        placeholderTextColor={colors.textMuted}
-        secureTextEntry
-        value={password}
-        onChangeText={text => {
-          setPassword(text);
-          if (errors.password || errors.general) setErrors(prev => ({ ...prev, password: undefined, general: undefined }));
-        }}
-      />
-      {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+      <View style={styles.fieldGroup}>
+        <TextInput
+          style={[styles.input, errors.email && styles.inputError]}
+          placeholder="Email"
+          placeholderTextColor={colors.textMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={text => {
+            setEmail(text);
+            if (errors.email || errors.general) setErrors(prev => ({ ...prev, email: undefined, general: undefined }));
+          }}
+        />
+        {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+      </View>
+
+      <View style={styles.fieldGroup}>
+        <TextInput
+          style={[styles.input, errors.password && styles.inputError]}
+          placeholder="Password"
+          placeholderTextColor={colors.textMuted}
+          secureTextEntry
+          value={password}
+          onChangeText={text => {
+            setPassword(text);
+            if (errors.password || errors.general) setErrors(prev => ({ ...prev, password: undefined, general: undefined }));
+          }}
+        />
+        {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+      </View>
 
       {errors.general && <Text style={[styles.errorText, styles.generalError]}>{errors.general}</Text>}
 
@@ -89,29 +94,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 46,
   },
-  logo: { marginBottom: 32 },
+  logo: { marginBottom: 40 },
+  fieldGroup: { marginBottom: 18 },
   input: {
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.navIconInactive,
     borderRadius: 24,
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: colors.text,
     fontFamily: fonts.regular,
-    marginBottom: 6,
   },
   inputError: { borderColor: colors.lose },
   errorText: {
     color: colors.lose,
     fontFamily: fonts.regular,
     fontSize: 12,
-    marginBottom: 6,
+    marginTop: 4,
     marginLeft: 4,
   },
   generalError: {
     textAlign: 'center',
     fontSize: 13,
-    marginTop: 4,
+    marginTop: -6,
     marginBottom: 8,
   },
   button: {

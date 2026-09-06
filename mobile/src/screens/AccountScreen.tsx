@@ -37,8 +37,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 'auto',
-    marginBottom: 24,
+    marginTop: 590,
   },
   logoutText: { color: colors.text, fontFamily: fonts.semiBold },
 });
