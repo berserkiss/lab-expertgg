@@ -1,5 +1,5 @@
-export function formatCountdown(startTime: string): string {
-  const diffMs = new Date(startTime).getTime() - Date.now();
+export function formatCountdown(startTime: string, now: number = Date.now()): string {
+  const diffMs = new Date(startTime).getTime() - now;
   if (diffMs <= 0) return 'Live';
 
   const totalSeconds = Math.floor(diffMs / 1000);

@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BalanceBadge from '../components/BalanceBadge';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
@@ -14,7 +13,6 @@ export default function GetCoinsScreen({ navigation }: any) {
           <Text style={styles.back}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Get coins</Text>
-        <BalanceBadge />
       </View>
       <View style={styles.body}>
         <Text style={styles.freeCoins}>Free Coins</Text>

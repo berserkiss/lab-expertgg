@@ -1,23 +1,43 @@
 import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AuthBackground from '../components/AuthBackground';
 import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
+interface FormErrors {
+  email?: string;
+  password?: string;
+  general?: string;
+}
+
 export default function SignInScreen() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const handleSubmit = async () => {
+    const nextErrors: FormErrors = {};
+    if (!email.trim()) nextErrors.email = 'Enter your email';
+    if (!password) nextErrors.password = 'Enter your password';
+    if (nextErrors.email || nextErrors.password) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
     try {
-      await login(email, password);
-    } catch {
-      Alert.alert('Login failed', 'Check your email and password.');
+      await login(email.trim(), password);
+    } catch (e: any) {
+      if (e?.response?.status === 401 || e?.response?.status === 400) {
+        setErrors({ general: 'Incorrect email or password.' });
+      } else {
+        setErrors({ general: 'Could not connect. Check your network and try again.' });
+      }
     } finally {
       setLoading(false);
     }
@@ -26,25 +46,37 @@ export default function SignInScreen() {
   return (
     <AuthBackground style={styles.container}>
       <View style={styles.logo}>
-        <Logo size={32} />
+        <Logo size={44} />
       </View>
       <TextInput
-        style={styles.input}
+        style={[styles.input, errors.email && styles.inputError]}
         placeholder="Email"
         placeholderTextColor={colors.textMuted}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={text => {
+          setEmail(text);
+          if (errors.email || errors.general) setErrors(prev => ({ ...prev, email: undefined, general: undefined }));
+        }}
       />
+      {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+
       <TextInput
-        style={styles.input}
+        style={[styles.input, errors.password && styles.inputError]}
         placeholder="Password"
         placeholderTextColor={colors.textMuted}
         secureTextEntry
         value={password}
-        onChangeText={setPassword}
+        onChangeText={text => {
+          setPassword(text);
+          if (errors.password || errors.general) setErrors(prev => ({ ...prev, password: undefined, general: undefined }));
+        }}
       />
+      {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
+
+      {errors.general && <Text style={[styles.errorText, styles.generalError]}>{errors.general}</Text>}
+
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? '...' : 'Log in'}</Text>
       </TouchableOpacity>
@@ -66,7 +98,21 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     color: colors.text,
     fontFamily: fonts.regular,
-    marginBottom: 12,
+    marginBottom: 6,
+  },
+  inputError: { borderColor: colors.lose },
+  errorText: {
+    color: colors.lose,
+    fontFamily: fonts.regular,
+    fontSize: 12,
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  generalError: {
+    textAlign: 'center',
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 8,
   },
   button: {
     backgroundColor: colors.primary,

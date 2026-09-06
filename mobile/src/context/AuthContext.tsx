@@ -6,7 +6,8 @@ import React, {
   useEffect,
   useState,
 } from 'react';
-import { fetchMe, login as loginRequest, User } from '../api/auth';
+import { fetchMe, login as loginRequest, logoutRequest, User } from '../api/auth';
+import { setAuthFailureHandler } from '../api/client';
 
 interface AuthContextValue {
   user: User | null;
@@ -21,6 +22,13 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // If a refresh ultimately fails (expired/revoked refresh token), the
+    // API client already clears storage - this just clears the in-memory
+    // session so the app falls back to SignIn.
+    setAuthFailureHandler(() => setUser(null));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -43,6 +51,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const refreshToken = await AsyncStorage.getItem('refresh_token');
+    if (refreshToken) {
+      try {
+        await logoutRequest(refreshToken);
+      } catch {
+        // Already invalid/expired - fine, we're clearing it locally either way.
+      }
+    }
     await AsyncStorage.removeMany(['access_token', 'refresh_token']);
     setUser(null);
   }, []);

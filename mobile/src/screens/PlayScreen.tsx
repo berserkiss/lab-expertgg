@@ -2,8 +2,9 @@ import React, { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import BalanceBadge from '../components/BalanceBadge';
 import EmptyState from '../components/EmptyState';
+import ErrorState from '../components/ErrorState';
+import { useNow } from '../hooks/useNow';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { fetchMatches, Match } from '../api/matches';
@@ -25,9 +26,17 @@ export default function PlayScreen({ navigation }: any) {
   const [range, setRange] = useState<'today' | 'tomorrow' | 'week'>('today');
   const [matches, setMatches] = useState<Match[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState(false);
+  const now = useNow(1000);
 
   const load = useCallback(async () => {
-    setMatches(await fetchMatches({ game, range }));
+    try {
+      const data = await fetchMatches({ game, range });
+      setMatches(data);
+      setError(false);
+    } catch {
+      setError(true);
+    }
   }, [game, range]);
 
   useFocusEffect(
@@ -38,15 +47,17 @@ export default function PlayScreen({ navigation }: any) {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
+    try {
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Play</Text>
-        <BalanceBadge />
       </View>
 
       <View style={styles.tabsRow}>
@@ -72,7 +83,9 @@ export default function PlayScreen({ navigation }: any) {
         ))}
       </View>
 
-      {matches.length === 0 ? (
+      {error ? (
+        <ErrorState onRetry={load} />
+      ) : matches.length === 0 ? (
         <EmptyState label="No Matches" />
       ) : (
         <FlatList
@@ -101,7 +114,7 @@ export default function PlayScreen({ navigation }: any) {
                 <Text style={styles.vs}>VS</Text>
                 <Text style={[styles.teamName, styles.teamNameRight]}>{item.team_b.name}</Text>
               </View>
-              <Text style={styles.countdown}>{formatCountdown(item.start_time)}</Text>
+              <Text style={styles.countdown}>{formatCountdown(item.start_time, now)}</Text>
             </TouchableOpacity>
           )}
         />

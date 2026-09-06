@@ -1,7 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BalanceBadge from '../components/BalanceBadge';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -13,7 +12,6 @@ export default function AccountScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Account</Text>
-        <BalanceBadge />
       </View>
 
       <TouchableOpacity style={styles.logoutButton} onPress={logout}>

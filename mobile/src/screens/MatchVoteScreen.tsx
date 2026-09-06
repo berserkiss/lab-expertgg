@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BalanceBadge from '../components/BalanceBadge';
+import ErrorState from '../components/ErrorState';
 import { useAuth } from '../context/AuthContext';
 import { fetchMatch, Match, placeVote, Team } from '../api/matches';
 import { colors } from '../theme/colors';
@@ -17,10 +17,24 @@ export default function MatchVoteScreen({ route, navigation }: any) {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [stake, setStake] = useState('10');
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    fetchMatch(matchId).then(setMatch);
-  }, [matchId]);
+  const loadMatch = () => {
+    setError(false);
+    fetchMatch(matchId)
+      .then(setMatch)
+      .catch(() => setError(true));
+  };
+
+  useEffect(loadMatch, [matchId]);
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <ErrorState onRetry={loadMatch} />
+      </SafeAreaView>
+    );
+  }
 
   if (!match) {
     return <SafeAreaView style={styles.container} edges={['top']} />;
@@ -58,7 +72,6 @@ export default function MatchVoteScreen({ route, navigation }: any) {
           <Text style={styles.back}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Play</Text>
-        <BalanceBadge />
       </View>
 
       <Text style={styles.tournament}>{match.tournament.name}</Text>

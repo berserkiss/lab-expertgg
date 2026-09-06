@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BalanceBadge from '../components/BalanceBadge';
+import ErrorState from '../components/ErrorState';
 import { fetchMatchBets } from '../api/matches';
 import { VoteHistoryItem } from '../api/votes';
 import { colors } from '../theme/colors';
@@ -10,10 +10,16 @@ import { fonts } from '../theme/fonts';
 export default function BookScreen({ route, navigation }: any) {
   const { matchId } = route.params;
   const [bets, setBets] = useState<VoteHistoryItem[]>([]);
+  const [error, setError] = useState(false);
 
-  useEffect(() => {
-    fetchMatchBets(matchId).then(setBets);
-  }, [matchId]);
+  const load = () => {
+    setError(false);
+    fetchMatchBets(matchId)
+      .then(setBets)
+      .catch(() => setError(true));
+  };
+
+  useEffect(load, [matchId]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -22,33 +28,36 @@ export default function BookScreen({ route, navigation }: any) {
           <Text style={styles.back}>{'<'}</Text>
         </TouchableOpacity>
         <Text style={styles.title}>Book</Text>
-        <BalanceBadge />
       </View>
-      <FlatList
-        data={bets}
-        keyExtractor={b => String(b.id)}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.rowBetween}>
-              <View style={styles.statusBadge}>
-                <Text style={styles.statusText}>Active</Text>
+      {error ? (
+        <ErrorState onRetry={load} />
+      ) : (
+        <FlatList
+          data={bets}
+          keyExtractor={b => String(b.id)}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <View style={styles.card}>
+              <View style={styles.rowBetween}>
+                <View style={styles.statusBadge}>
+                  <Text style={styles.statusText}>Active</Text>
+                </View>
+                <Text style={styles.muted}>
+                  {item.match.tournament.game.name}: {item.match.tournament.name}
+                </Text>
               </View>
-              <Text style={styles.muted}>
-                {item.match.tournament.game.name}: {item.match.tournament.name}
-              </Text>
+              <View style={styles.rowBetween}>
+                <Text style={styles.teamName}>{item.match.team_a.name}</Text>
+                <Text style={styles.teamName}>{item.match.team_b.name}</Text>
+              </View>
+              <View style={styles.rowBetween}>
+                <Text style={styles.muted}>{new Date(item.created_at).toLocaleString()}</Text>
+                <Text style={styles.amount}>{item.amount} gg</Text>
+              </View>
             </View>
-            <View style={styles.rowBetween}>
-              <Text style={styles.teamName}>{item.match.team_a.name}</Text>
-              <Text style={styles.teamName}>{item.match.team_b.name}</Text>
-            </View>
-            <View style={styles.rowBetween}>
-              <Text style={styles.muted}>{new Date(item.created_at).toLocaleString()}</Text>
-              <Text style={styles.amount}>{item.amount} gg</Text>
-            </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }

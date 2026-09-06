@@ -20,3 +20,9 @@ export async function fetchMe() {
   const { data } = await apiClient.get<User>('/auth/me/');
   return data;
 }
+
+export async function logoutRequest(refreshToken: string) {
+  // Blacklists the refresh token server-side so it can't be used to mint
+  // new access tokens after the user logs out.
+  await apiClient.post('/auth/logout/', { refresh: refreshToken });
+}

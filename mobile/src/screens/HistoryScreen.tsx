@@ -2,8 +2,8 @@ import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import BalanceBadge from '../components/BalanceBadge';
 import EmptyState from '../components/EmptyState';
+import ErrorState from '../components/ErrorState';
 import { fetchHistory, VoteHistoryItem } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -13,20 +13,27 @@ const STATUS_COLOR: Record<string, string> = { win: colors.win, lose: colors.los
 
 export default function HistoryScreen() {
   const [items, setItems] = useState<VoteHistoryItem[]>([]);
+  const [error, setError] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchHistory().then(setItems);
-    }, []),
-  );
+  const load = useCallback(() => {
+    fetchHistory()
+      .then(data => {
+        setItems(data);
+        setError(false);
+      })
+      .catch(() => setError(true));
+  }, []);
+
+  useFocusEffect(load);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>History</Text>
-        <BalanceBadge />
       </View>
-      {items.length === 0 ? (
+      {error ? (
+        <ErrorState onRetry={load} />
+      ) : items.length === 0 ? (
         <EmptyState label="No History" />
       ) : (
         <FlatList
