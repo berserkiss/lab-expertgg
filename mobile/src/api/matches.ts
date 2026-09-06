@@ -1,0 +1,61 @@
+import { apiClient } from './client';
+
+export interface Team {
+  id: number;
+  name: string;
+  logo: string | null;
+}
+
+export interface Game {
+  id: number;
+  name: string;
+  slug: string;
+  icon: string | null;
+}
+
+export interface Tournament {
+  id: number;
+  name: string;
+  game: Game;
+}
+
+export interface Match {
+  id: number;
+  tournament: Tournament;
+  team_a: Team;
+  team_b: Team;
+  start_time: string;
+  status: 'upcoming' | 'live' | 'finished';
+  winner: number | null;
+  has_active_bet: boolean;
+}
+
+export async function fetchMatches(params: {
+  game?: string;
+  range?: 'today' | 'tomorrow' | 'week';
+}) {
+  const { data } = await apiClient.get<Match[]>('/matches/', { params });
+  return data;
+}
+
+export async function fetchMatch(id: number) {
+  const { data } = await apiClient.get<Match>(`/matches/${id}/`);
+  return data;
+}
+
+export async function placeVote(
+  matchId: number,
+  predictedTeam: number,
+  stake: number,
+) {
+  const { data } = await apiClient.post(`/matches/${matchId}/vote/`, {
+    predicted_team: predictedTeam,
+    stake,
+  });
+  return data;
+}
+
+export async function fetchMatchBets(matchId: number) {
+  const { data } = await apiClient.get(`/matches/${matchId}/bets/`);
+  return data;
+}
