@@ -10,20 +10,9 @@ import { fonts } from '../theme/fonts';
 import { fetchMatches, Match } from '../api/matches';
 import { formatCountdown } from '../utils/countdown';
 
-const GAMES = [
-  { slug: 'lol', label: 'League of Legends' },
-  { slug: 'cs', label: 'Counter-Strike' },
-];
-
-const RANGES: { key: 'today' | 'tomorrow' | 'week'; label: string }[] = [
-  { key: 'today', label: 'Today' },
-  { key: 'tomorrow', label: 'Tomorrow' },
-  { key: 'week', label: 'This week' },
-];
-
+// Game/date filters are hidden for now (client-side only) - re-add the
+// tabsRow/rangeRow UI once the design comes back for them.
 export default function PlayScreen({ navigation }: any) {
-  const [game, setGame] = useState('cs');
-  const [range, setRange] = useState<'today' | 'tomorrow' | 'week'>('today');
   const [matches, setMatches] = useState<Match[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
@@ -31,13 +20,13 @@ export default function PlayScreen({ navigation }: any) {
 
   const load = useCallback(async () => {
     try {
-      const data = await fetchMatches({ game, range });
+      const data = await fetchMatches({});
       setMatches(data);
       setError(false);
     } catch {
       setError(true);
     }
-  }, [game, range]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -58,29 +47,6 @@ export default function PlayScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Play</Text>
-      </View>
-
-      <View style={styles.tabsRow}>
-        {GAMES.map(g => (
-          <TouchableOpacity key={g.slug} onPress={() => setGame(g.slug)} style={styles.gameTab}>
-            <Text style={[styles.gameTabText, game === g.slug && styles.gameTabTextActive]}>
-              {g.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <View style={styles.rangeRow}>
-        {RANGES.map(r => (
-          <TouchableOpacity
-            key={r.key}
-            onPress={() => setRange(r.key)}
-            style={[styles.rangePill, range === r.key && styles.rangePillActive]}>
-            <Text style={[styles.rangeText, range === r.key && styles.rangeTextActive]}>
-              {r.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
       </View>
 
       {error ? (
@@ -132,22 +98,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
-  tabsRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12 },
-  gameTab: { marginRight: 20 },
-  gameTabText: { color: colors.textMuted, fontFamily: fonts.regular },
-  gameTabTextActive: { color: colors.text, fontFamily: fonts.bold },
-  rangeRow: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 12 },
-  rangePill: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    marginRight: 8,
-    backgroundColor: colors.card,
-  },
-  rangePillActive: { backgroundColor: colors.primary },
-  rangeText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.regular },
-  rangeTextActive: { color: colors.text, fontFamily: fonts.semiBold },
-  list: { paddingHorizontal: 16, paddingBottom: 24 },
+  list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
   card: {
     backgroundColor: colors.card,
     borderRadius: 12,

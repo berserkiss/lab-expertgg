@@ -91,7 +91,8 @@ export default function SignInScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 140,
     paddingHorizontal: 46,
   },
   logo: { marginBottom: 40 },
