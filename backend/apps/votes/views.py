@@ -50,8 +50,8 @@ class VoteHistoryView(generics.ListAPIView):
 
 
 class LeaderboardView(generics.ListAPIView):
-    """GET /api/leaderboard/ - ranked by gg balance, all-time."""
+    """GET /api/leaderboard/ - ranked by gg balance, all-time. Staff accounts don't count as players."""
 
     serializer_class = LeaderboardSerializer
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Wallet.objects.select_related("user").order_by("-balance")[:100]
+    queryset = Wallet.objects.select_related("user").filter(user__is_staff=False).order_by("-balance")[:100]
