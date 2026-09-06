@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
 export default function SignInScreen() {
   const { login } = useAuth();
@@ -22,7 +24,9 @@ export default function SignInScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.logo}>expert</Text>
+      <View style={styles.logo}>
+        <Logo size={32} />
+      </View>
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -52,15 +56,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     justifyContent: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 46,
   },
-  logo: {
-    color: colors.text,
-    fontSize: 32,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 32,
-  },
+  logo: { marginBottom: 32 },
   input: {
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -68,14 +66,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     color: colors.text,
+    fontFamily: fonts.regular,
     marginBottom: 12,
   },
   button: {
     backgroundColor: colors.primary,
     borderRadius: 24,
-    paddingVertical: 14,
+    height: 50,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 8,
   },
-  buttonText: { color: colors.text, fontWeight: '600', fontSize: 16 },
+  buttonText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 16 },
 });
