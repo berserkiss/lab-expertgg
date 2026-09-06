@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16 },
   title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
-  list: { paddingHorizontal: 16, paddingTop: 60, paddingBottom: 24 },
+  list: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
