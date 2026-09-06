@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import AuthBackground from '../components/AuthBackground';
 import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
@@ -23,7 +24,7 @@ export default function SignInScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <AuthBackground style={styles.container}>
       <View style={styles.logo}>
         <Logo size={32} />
       </View>
@@ -47,14 +48,12 @@ export default function SignInScreen() {
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? '...' : 'Log in'}</Text>
       </TouchableOpacity>
-    </View>
+    </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: colors.background,
     justifyContent: 'center',
     paddingHorizontal: 46,
   },

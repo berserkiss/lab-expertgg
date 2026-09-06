@@ -5,6 +5,7 @@ import BalanceBadge from '../components/BalanceBadge';
 import { fetchMatchBets } from '../api/matches';
 import { VoteHistoryItem } from '../api/votes';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
 export default function BookScreen({ route, navigation }: any) {
   const { matchId } = route.params;
@@ -56,7 +57,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   back: { color: colors.text, fontSize: 20 },
-  title: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  title: { color: colors.text, fontSize: 18, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16 },
   card: {
     backgroundColor: colors.card,
@@ -68,8 +69,8 @@ const styles = StyleSheet.create({
   },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   statusBadge: { backgroundColor: colors.active, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  statusText: { color: colors.background, fontSize: 11, fontWeight: '700' },
-  muted: { color: colors.textMuted, fontSize: 12 },
-  teamName: { color: colors.text, fontWeight: '600' },
-  amount: { color: colors.active, fontWeight: '700' },
+  statusText: { color: colors.background, fontSize: 11, fontFamily: fonts.bold },
+  muted: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.regular },
+  teamName: { color: colors.text, fontFamily: fonts.semiBold },
+  amount: { color: colors.active, fontFamily: fonts.bold },
 });

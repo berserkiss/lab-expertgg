@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BalanceBadge from '../components/BalanceBadge';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
 export default function AccountScreen({ navigation }: any) {
   const { user, logout } = useAuth();
@@ -48,12 +49,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  title: { color: colors.text, fontSize: 24, fontWeight: '700' },
+  title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
   profile: { alignItems: 'center', marginVertical: 24 },
   avatar: { width: 96, height: 96, borderRadius: 48, marginBottom: 12 },
   avatarPlaceholder: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.card, marginBottom: 12 },
-  username: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  email: { color: colors.textMuted, fontSize: 13 },
+  username: { color: colors.text, fontSize: 18, fontFamily: fonts.bold },
+  email: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.regular },
   editButton: {
     borderColor: colors.primary,
     borderWidth: 1,
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  editButtonText: { color: colors.primary, fontWeight: '600' },
+  editButtonText: { color: colors.primary, fontFamily: fonts.semiBold },
   getCoinsButton: {
     backgroundColor: colors.card,
     borderRadius: 20,
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  getCoinsText: { color: colors.text, fontWeight: '600' },
+  getCoinsText: { color: colors.text, fontFamily: fonts.semiBold },
   logoutButton: {
     borderColor: colors.cardBorder,
     borderWidth: 1,
@@ -83,5 +84,5 @@ const styles = StyleSheet.create({
     marginTop: 'auto',
     marginBottom: 24,
   },
-  logoutText: { color: colors.text, fontWeight: '600' },
+  logoutText: { color: colors.text, fontFamily: fonts.semiBold },
 });

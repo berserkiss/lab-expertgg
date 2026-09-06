@@ -1,21 +1,20 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet } from 'react-native';
+import AuthBackground from '../components/AuthBackground';
 import Logo from '../components/Logo';
 import { colors } from '../theme/colors';
 
 export default function SplashScreen() {
   return (
-    <View style={styles.container}>
+    <AuthBackground style={styles.container}>
       <Logo size={40} />
       <ActivityIndicator color={colors.primary} style={styles.spinner} />
-    </View>
+    </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -5,6 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import BalanceBadge from '../components/BalanceBadge';
 import { fetchLeaderboard, LeaderboardEntry } from '../api/votes';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
 export default function LeaderboardScreen() {
   const [items, setItems] = useState<LeaderboardEntry[]>([]);
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  title: { color: colors.text, fontSize: 24, fontWeight: '700' },
+  title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16 },
   row: {
     flexDirection: 'row',
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
-  rank: { color: colors.textMuted, width: 24, fontWeight: '700' },
-  username: { color: colors.text, flex: 1, fontWeight: '600' },
-  balance: { color: colors.coin, fontWeight: '700' },
+  rank: { color: colors.textMuted, width: 24, fontFamily: fonts.bold },
+  username: { color: colors.text, flex: 1, fontFamily: fonts.semiBold },
+  balance: { color: colors.coin, fontFamily: fonts.bold },
 });

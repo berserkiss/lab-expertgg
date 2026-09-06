@@ -6,9 +6,11 @@ import PlayStack from './PlayStack';
 import HistoryScreen from '../screens/HistoryScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
 const Tab = createBottomTabNavigator();
 
+// Placeholder glyphs - swap for the real nav icon SVGs once provided.
 const ICONS: Record<string, string> = {
   Play: '⚔',
   History: '≡',
@@ -21,10 +23,11 @@ export default function MainTabs() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.cardBorder },
-        tabBarIcon: () => <Text>{ICONS[route.name]}</Text>,
+        tabBarActiveTintColor: colors.navIconActive,
+        tabBarInactiveTintColor: colors.navIconInactive,
+        tabBarStyle: { backgroundColor: colors.navBackground, borderTopColor: colors.navBackground },
+        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 11 },
+        tabBarIcon: ({ color }) => <Text style={{ color }}>{ICONS[route.name]}</Text>,
       })}>
       <Tab.Screen name="Play" component={PlayStack} />
       <Tab.Screen name="History" component={HistoryScreen} />

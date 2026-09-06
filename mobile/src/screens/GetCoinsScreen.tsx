@@ -3,6 +3,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BalanceBadge from '../components/BalanceBadge';
 import { colors } from '../theme/colors';
+import { fonts } from '../theme/fonts';
 
 // Placeholder screen: there is no backend endpoint for this yet.
 export default function GetCoinsScreen({ navigation }: any) {
@@ -29,9 +30,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   back: { color: colors.text, fontSize: 20 },
-  title: { color: colors.text, fontSize: 18, fontWeight: '700' },
+  title: { color: colors.text, fontSize: 18, fontFamily: fonts.bold },
   body: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 },
-  freeCoins: { color: colors.text, fontSize: 20, fontWeight: '700', marginBottom: 24 },
+  freeCoins: { color: colors.text, fontSize: 20, fontFamily: fonts.bold, marginBottom: 24 },
   button: { backgroundColor: colors.primary, borderRadius: 20, paddingVertical: 12, paddingHorizontal: 32 },
-  buttonText: { color: colors.text, fontWeight: '600' },
+  buttonText: { color: colors.text, fontFamily: fonts.semiBold },
 });

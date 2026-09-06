@@ -9,7 +9,7 @@ export default function Logo({ size = 32 }: { size?: number }) {
   return (
     <View style={styles.row}>
       <Text style={[styles.text, { fontSize: size }]}>e</Text>
-      <SwordsIcon width={iconSize} height={iconSize} style={styles.icon} />
+      <SwordsIcon width={iconSize} height={iconSize} color={colors.text} style={styles.icon} />
       <Text style={[styles.text, { fontSize: size }]}>pert</Text>
     </View>
   );
