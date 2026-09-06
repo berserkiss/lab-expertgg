@@ -35,8 +35,8 @@ class Match(models.Model):
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="matches")
     team_a = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="matches_as_a")
     team_b = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="matches_as_b")
-    start_time = models.DateTimeField()
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.UPCOMING)
+    start_time = models.DateTimeField(db_index=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.UPCOMING, db_index=True)
     winner = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
 

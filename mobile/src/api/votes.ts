@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, Paginated } from './client';
 import { Match, Team } from './matches';
 
 export interface VoteHistoryItem {
@@ -12,8 +12,8 @@ export interface VoteHistoryItem {
 }
 
 export async function fetchHistory() {
-  const { data } = await apiClient.get<VoteHistoryItem[]>('/votes/history/');
-  return data;
+  const { data } = await apiClient.get<Paginated<VoteHistoryItem>>('/votes/history/');
+  return data.results;
 }
 
 export interface LeaderboardEntry {
@@ -23,6 +23,6 @@ export interface LeaderboardEntry {
 }
 
 export async function fetchLeaderboard() {
-  const { data } = await apiClient.get<LeaderboardEntry[]>('/leaderboard/');
-  return data;
+  const { data } = await apiClient.get<Paginated<LeaderboardEntry>>('/leaderboard/');
+  return data.results;
 }

@@ -9,6 +9,15 @@ export const apiClient = axios.create({
   baseURL: API_BASE_URL,
 });
 
+// Shape of every DRF ListAPIView response now that pagination is enabled
+// (PageNumberPagination, PAGE_SIZE=20 - see backend config/settings.py).
+export interface Paginated<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+}
+
 apiClient.interceptors.request.use(async config => {
   const token = await AsyncStorage.getItem('access_token');
   if (token) {

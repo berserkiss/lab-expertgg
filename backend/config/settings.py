@@ -6,6 +6,7 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -17,9 +18,17 @@ def env_bool(name, default=False):
     return os.environ.get(name, str(default)).lower() in ("1", "true", "yes")
 
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-dev-only-change-me")
+# Safe-by-default: DEBUG only turns on when explicitly requested (e.g. in
+# backend/.env for local dev). A prod environment that forgets to set DEBUG
+# gets the secure behavior, not an accidental debug server.
+DEBUG = env_bool("DEBUG", False)
 
-DEBUG = env_bool("DEBUG", True)
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-dev-only-change-me"
+    else:
+        raise ImproperlyConfigured("SECRET_KEY environment variable must be set when DEBUG=False.")
 
 ALLOWED_HOSTS = [h.strip() for h in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
@@ -35,6 +44,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "apps.accounts",
     "apps.wallet",
@@ -130,14 +140,41 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_THROTTLE_RATES": {
+        # Applied via ScopedRateThrottle on the auth endpoints (register/login).
+        "auth": "10/min",
+    },
 }
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=14),
+    # Old refresh tokens stop working the moment a new one is issued, and
+    # logout can permanently revoke a refresh token server-side (see
+    # apps/accounts/views.py LogoutView) instead of only deleting it client-side.
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 
-# CORS — mobile app origin is not browser-based, but keep this open for local dev tools.
+# CORS — mobile app origin is not browser-based (CORS doesn't apply to it),
+# this only matters for browser-based tools hitting the API. Off by default;
+# turn on explicitly per-environment (backend/.env already does for local dev).
 
-CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", True)
+CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", False)
+
+
+# HTTPS enforcement — only matters when DEBUG=False (local dev stays plain HTTP).
+# SECURE_PROXY_SSL_HEADER trusts Nginx's X-Forwarded-Proto so this doesn't
+# redirect-loop when Django sits behind the reverse proxy on the Droplet.
+
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

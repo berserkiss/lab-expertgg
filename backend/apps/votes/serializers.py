@@ -1,4 +1,5 @@
 from django.db import transaction
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.matches.models import Match
@@ -21,11 +22,15 @@ class VoteCreateSerializer(serializers.ModelSerializer):
 
         if stake < 1:
             raise serializers.ValidationError({"stake": "Stake must be at least 1 gg."})
-        if match.status == Match.Status.FINISHED:
-            raise serializers.ValidationError("This match is already finished.")
+        if match.status != Match.Status.UPCOMING or match.start_time <= timezone.now():
+            raise serializers.ValidationError("Betting is closed for this match.")
         if team.id not in (match.team_a_id, match.team_b_id):
             raise serializers.ValidationError({"predicted_team": "This team is not playing in this match."})
 
+        # Fast, unlocked pre-check for a quick error message. This is NOT the
+        # authoritative check - create() re-checks under a row lock, since two
+        # concurrent bets could otherwise both pass this check against the
+        # same stale balance and overdraw the wallet.
         wallet = self.context["request"].user.wallet
         if stake > wallet.balance:
             raise serializers.ValidationError({"stake": "Not enough gg balance."})
@@ -39,6 +44,8 @@ class VoteCreateSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             wallet = Wallet.objects.select_for_update().get(user=user)
+            if stake > wallet.balance:
+                raise serializers.ValidationError({"stake": "Not enough gg balance."})
             wallet.balance -= stake
             wallet.save(update_fields=["balance"])
             wallet.transactions.create(amount=-stake, type="bet_stake")

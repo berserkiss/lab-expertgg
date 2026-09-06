@@ -1,4 +1,5 @@
-import { apiClient } from './client';
+import { apiClient, Paginated } from './client';
+import type { VoteHistoryItem } from './votes';
 
 export interface Team {
   id: number;
@@ -34,8 +35,8 @@ export async function fetchMatches(params: {
   game?: string;
   range?: 'today' | 'tomorrow' | 'week';
 }) {
-  const { data } = await apiClient.get<Match[]>('/matches/', { params });
-  return data;
+  const { data } = await apiClient.get<Paginated<Match>>('/matches/', { params });
+  return data.results;
 }
 
 export async function fetchMatch(id: number) {
@@ -56,6 +57,6 @@ export async function placeVote(
 }
 
 export async function fetchMatchBets(matchId: number) {
-  const { data } = await apiClient.get(`/matches/${matchId}/bets/`);
-  return data;
+  const { data } = await apiClient.get<Paginated<VoteHistoryItem>>(`/matches/${matchId}/bets/`);
+  return data.results;
 }

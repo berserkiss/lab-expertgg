@@ -14,7 +14,7 @@ class Vote(models.Model):
     match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name="votes")
     predicted_team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="+")
     stake = models.PositiveIntegerField()
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.ACTIVE, db_index=True)
     payout = models.IntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
