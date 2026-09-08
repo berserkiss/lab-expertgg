@@ -7,7 +7,7 @@ import { colors } from '../theme/colors';
 export default function SplashScreen() {
   return (
     <AuthBackground style={styles.container}>
-      <Logo size={40} />
+      <Logo size={60} />
       <ActivityIndicator color={colors.primary} style={styles.spinner} />
     </AuthBackground>
   );

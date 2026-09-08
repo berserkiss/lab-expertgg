@@ -17,6 +17,6 @@ export default function Logo({ size = 32 }: { size?: number }) {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  text: { color: colors.text, fontFamily: fonts.bold },
+  text: { color: colors.text, fontFamily: fonts.medium },
   icon: { marginHorizontal: -2 },
 });
