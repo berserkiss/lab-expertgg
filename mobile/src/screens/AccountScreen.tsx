@@ -33,14 +33,16 @@ const styles = StyleSheet.create({
   logoutButton: {
     borderColor: colors.primary,
     borderWidth: 1,
-    borderRadius: 20,
+    // Same size as SignInScreen's "Log in" button (height 50, radius 24).
+    borderRadius: 24,
+    height: 50,
     marginHorizontal: 24,
     // Matches the Leaderboard list's last-row bottom edge (measured live -
     // see Figma DK. Account) so the two tabs feel aligned when switching
     // between them, rather than the button sitting flush at the screen edge.
     marginBottom: 33,
-    paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   logoutText: { color: colors.text, fontFamily: fonts.semiBold },
 });
