@@ -83,17 +83,17 @@ export default function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { padding: 16 },
+  header: { padding: 16, paddingBottom: 8 },
   title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
-  list: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 24 },
+  list: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.navBackground,
     borderRadius: 14,
-    paddingVertical: 20,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   rank: { color: colors.textMuted, width: 20, fontFamily: fonts.semiBold },
   avatar: { width: 32, height: 32, borderRadius: 16, marginRight: 12 },
