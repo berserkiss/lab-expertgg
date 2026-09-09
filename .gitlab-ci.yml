@@ -15,15 +15,4 @@ deploy_backend:
     - mkdir -p ~/.ssh
     - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
   script:
-    - ssh root@$DEPLOY_HOST "
-        cd /root/lab-expertgg &&
-        git fetch origin main &&
-        git reset --hard origin/main &&
-        cd backend &&
-        source venv/bin/activate &&
-        pip install -q -r requirements.txt &&
-        python manage.py migrate --noinput &&
-        python manage.py collectstatic --noinput &&
-        systemctl restart expertgg &&
-        systemctl is-active expertgg
-      "
+    - ssh root@$DEPLOY_HOST "cd /root/lab-expertgg && git fetch origin main && git reset --hard origin/main && cd backend && source venv/bin/activate && pip install -q -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput && systemctl restart expertgg && systemctl is-active expertgg"
