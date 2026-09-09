@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import AuthBackground from '../components/AuthBackground';
 import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
@@ -83,7 +83,11 @@ export default function SignInScreen() {
       {errors.general && <Text style={[styles.errorText, styles.generalError]}>{errors.general}</Text>}
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? '...' : 'Log in'}</Text>
+        {loading ? (
+          <ActivityIndicator color={colors.text} />
+        ) : (
+          <Text style={styles.buttonText}>Log in</Text>
+        )}
       </TouchableOpacity>
     </AuthBackground>
   );

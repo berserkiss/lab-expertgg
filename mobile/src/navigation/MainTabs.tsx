@@ -27,7 +27,15 @@ export default function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: colors.navIconActive,
         tabBarInactiveTintColor: colors.navIconInactive,
-        tabBarStyle: { backgroundColor: colors.navBackground, borderTopColor: colors.navBackground },
+        // paddingHorizontal keeps the outer two tabs' labels (Play, Account)
+        // off the very edge of the screen - on some real devices with
+        // rounded display corners, edge-to-edge content there gets visually
+        // clipped by the corner radius, which the emulator doesn't simulate.
+        tabBarStyle: {
+          backgroundColor: colors.navBackground,
+          borderTopColor: colors.navBackground,
+          paddingHorizontal: 12,
+        },
         tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 11 },
         tabBarIcon: ({ color }) => {
           const Icon = ICONS[route.name];
