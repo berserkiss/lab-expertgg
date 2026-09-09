@@ -169,8 +169,14 @@ CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", False)
 # HTTPS enforcement — only matters when DEBUG=False (local dev stays plain HTTP).
 # SECURE_PROXY_SSL_HEADER trusts Nginx's X-Forwarded-Proto so this doesn't
 # redirect-loop when Django sits behind the reverse proxy on the Droplet.
+# FORCE_HTTPS defaults on (safe by default) but the Droplet's .env sets it to
+# False during the interim window between "server is up" and "domain + TLS
+# cert exist" - redirecting to HTTPS before a cert exists would make the
+# site completely unreachable.
 
-if not DEBUG:
+FORCE_HTTPS = env_bool("FORCE_HTTPS", True)
+
+if not DEBUG and FORCE_HTTPS:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
