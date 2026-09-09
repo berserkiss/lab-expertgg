@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EmptyState from '../components/EmptyState';
@@ -6,13 +6,24 @@ import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
 import { useAuth } from '../context/AuthContext';
 import { useFetchList } from '../hooks/useFetchList';
-import { fetchLeaderboard } from '../api/votes';
+import { fetchLeaderboard, LeaderboardEntry } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
   const { items, error, loading, reload } = useFetchList(fetchLeaderboard);
+  const listRef = useRef<FlatList<LeaderboardEntry>>(null);
+
+  const myIndex = user ? items.findIndex(item => item.username === user.username) : -1;
+
+  // Jump straight to the logged-in user's row once the list loads, so a
+  // player ranked far down doesn't have to scroll to find themselves -
+  // same idea as Spotify Wrapped/Duolingo leaderboards.
+  useEffect(() => {
+    if (myIndex < 0) return;
+    listRef.current?.scrollToIndex({ index: myIndex, animated: true, viewPosition: 0.5 });
+  }, [myIndex]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -27,9 +38,21 @@ export default function LeaderboardScreen() {
         <EmptyState label="No Leaders" />
       ) : (
         <FlatList
+          ref={listRef}
           data={items}
           keyExtractor={(_, i) => String(i)}
           contentContainerStyle={styles.list}
+          onScrollToIndexFailed={info => {
+            // The list hasn't measured that far down yet on first render -
+            // jump to the estimated offset, then retry the precise scroll.
+            listRef.current?.scrollToOffset({
+              offset: info.averageItemLength * info.index,
+              animated: false,
+            });
+            setTimeout(() => {
+              listRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.5 });
+            }, 50);
+          }}
           renderItem={({ item, index }) => {
             const isMe = !!user && item.username === user.username;
             return (
