@@ -34,10 +34,13 @@ export default function MainTabs() {
         tabBarStyle: {
           backgroundColor: colors.navBackground,
           borderTopColor: colors.navBackground,
-          paddingHorizontal: 12,
+          paddingHorizontal: 4,
           paddingBottom: 10,
         },
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 11 },
+        // "Leaderboard" is the longest label - on a narrower real device the
+        // outer padding above left it without enough room and it truncated
+        // to "Leaderboar...". Dropped a point to give it headroom everywhere.
+        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 10 },
         tabBarIcon: ({ color }) => {
           const Icon = ICONS[route.name];
           return <Icon width={22} height={22} color={color} />;

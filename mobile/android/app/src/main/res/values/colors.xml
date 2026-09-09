@@ -1,0 +1,6 @@
+<resources>
+    <!-- Matches theme/colors.ts navBackground, so the system nav bar (Android's
+         own back/home/recents buttons) blends with our bottom tab bar instead
+         of showing as a visibly different band underneath it. -->
+    <color name="nav_background">#191B28</color>
+</resources>
