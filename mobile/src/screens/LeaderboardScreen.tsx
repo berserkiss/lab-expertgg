@@ -20,10 +20,17 @@ export default function LeaderboardScreen() {
   // Jump straight to the logged-in user's row once the list loads, so a
   // player ranked far down doesn't have to scroll to find themselves -
   // same idea as Spotify Wrapped/Duolingo leaderboards.
+  //
+  // Depends on `items` (not `myIndex`) because useFetchList's useFocusEffect
+  // re-fetches - and hands back a new `items` array - every time this screen
+  // regains focus, remounting the FlatList in the process (it's swapped for
+  // LoadingState while loading). myIndex is usually the same number across
+  // those reloads, so an effect keyed on it wouldn't re-fire and the newly
+  // remounted list would just sit at the top with no scroll applied.
   useEffect(() => {
     if (myIndex < 0) return;
     listRef.current?.scrollToIndex({ index: myIndex, animated: true, viewPosition: 0.5 });
-  }, [myIndex]);
+  }, [items, myIndex]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

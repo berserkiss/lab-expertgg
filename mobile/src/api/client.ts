@@ -11,7 +11,7 @@ const DEV_HOST = Platform.select({ android: '10.0.2.2', default: 'localhost' });
 
 export const API_BASE_URL = __DEV__
   ? `http://${DEV_HOST}:8000/api`
-  : 'https://api.lab-expertgg.example/api';
+  : 'https://159-89-14-160.sslip.io/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
