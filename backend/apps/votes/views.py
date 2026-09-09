@@ -3,10 +3,9 @@ from rest_framework import generics, permissions
 
 from apps.matches.models import Match
 from apps.wallet.models import Wallet
-from apps.wallet.serializers import LeaderboardSerializer
 
 from .models import Vote
-from .serializers import VoteCreateSerializer, VoteHistorySerializer
+from .serializers import LeaderboardSerializer, VoteCreateSerializer, VoteHistorySerializer
 
 
 class VoteCreateView(generics.CreateAPIView):

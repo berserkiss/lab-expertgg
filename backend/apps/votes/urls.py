@@ -1,10 +1,10 @@
 from django.urls import path
 
-from .views import LeaderboardView, MatchBetsView, VoteCreateView, VoteHistoryView
+from .views import LeaderboardView, VoteHistoryView
 
+# vote-create and match-bets live in apps/matches/urls.py instead - they're
+# nested under /api/matches/<id>/..., which that app's urls.py owns.
 urlpatterns = [
-    path("matches/<int:match_id>/vote/", VoteCreateView.as_view(), name="vote-create"),
-    path("matches/<int:match_id>/bets/", MatchBetsView.as_view(), name="match-bets"),
     path("votes/history/", VoteHistoryView.as_view(), name="vote-history"),
     path("leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
 ]

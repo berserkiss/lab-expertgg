@@ -3,7 +3,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from apps.matches.models import Match
-from apps.wallet.models import Wallet
+from apps.wallet.models import CoinTransaction, Wallet
 
 from .models import Vote
 
@@ -27,11 +27,9 @@ def resolve_votes_on_match_finished(sender, instance, **kwargs):
                 payout = vote.stake * 2 + WIN_BONUS
                 vote.status = Vote.Status.WIN
                 vote.payout = payout
-                wallet.balance += payout
-                wallet.transactions.create(amount=payout, type="bet_win", related_vote=vote)
+                wallet.credit(payout, CoinTransaction.Type.BET_WIN, related_vote=vote)
             else:
                 vote.status = Vote.Status.LOSE
                 vote.payout = 0
-                wallet.transactions.create(amount=0, type="bet_lose", related_vote=vote)
+                wallet.transactions.create(amount=0, type=CoinTransaction.Type.BET_LOSE, related_vote=vote)
             vote.save(update_fields=["status", "payout"])
-            wallet.save(update_fields=["balance"])

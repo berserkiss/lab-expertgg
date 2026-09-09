@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from apps.matches.models import Match
 from apps.matches.serializers import MatchSerializer, TeamSerializer
-from apps.wallet.models import Wallet
+from apps.wallet.models import CoinTransaction, InsufficientBalance, Wallet
 
 from .models import Vote
 
@@ -44,11 +44,10 @@ class VoteCreateSerializer(serializers.ModelSerializer):
 
         with transaction.atomic():
             wallet = Wallet.objects.select_for_update().get(user=user)
-            if stake > wallet.balance:
+            try:
+                wallet.debit(stake, CoinTransaction.Type.BET_STAKE)
+            except InsufficientBalance:
                 raise serializers.ValidationError({"stake": "Not enough gg balance."})
-            wallet.balance -= stake
-            wallet.save(update_fields=["balance"])
-            wallet.transactions.create(amount=-stake, type="bet_stake")
             vote = Vote.objects.create(
                 user=user,
                 match=match,
@@ -75,3 +74,16 @@ class VoteHistorySerializer(serializers.ModelSerializer):
         if obj.status == Vote.Status.LOSE:
             return -obj.stake
         return obj.stake
+
+
+class LeaderboardSerializer(serializers.ModelSerializer):
+    """Serializes a Wallet as a leaderboard row - lives here (not in the wallet
+    app) since ranking players against each other is a votes/competition
+    concern, not a personal-balance concern."""
+
+    username = serializers.CharField(source="user.username")
+    avatar = serializers.ImageField(source="user.avatar")
+
+    class Meta:
+        model = Wallet
+        fields = ("username", "avatar", "balance")
