@@ -1,43 +1,28 @@
 import React, { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
+import LoadingState from '../components/LoadingState';
+import { useFetchList } from '../hooks/useFetchList';
 import { useNow } from '../hooks/useNow';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
-import { fetchMatches, Match } from '../api/matches';
+import { fetchMatches } from '../api/matches';
 import { formatCountdown } from '../utils/countdown';
 
 // Game/date filters are hidden for now (client-side only) - re-add the
 // tabsRow/rangeRow UI once the design comes back for them.
 export default function PlayScreen({ navigation }: any) {
-  const [matches, setMatches] = useState<Match[]>([]);
+  const fetchAllMatches = useCallback(() => fetchMatches({}), []);
+  const { items: matches, error, loading, reload } = useFetchList(fetchAllMatches);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState(false);
   const now = useNow(1000);
-
-  const load = useCallback(async () => {
-    try {
-      const data = await fetchMatches({});
-      setMatches(data);
-      setError(false);
-    } catch {
-      setError(true);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load]),
-  );
 
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await load();
+      await reload();
     } finally {
       setRefreshing(false);
     }
@@ -49,8 +34,10 @@ export default function PlayScreen({ navigation }: any) {
         <Text style={styles.title}>Play</Text>
       </View>
 
-      {error ? (
-        <ErrorState onRetry={load} />
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : matches.length === 0 ? (
         <EmptyState label="No Matches" />
       ) : (

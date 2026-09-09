@@ -22,7 +22,7 @@ export default function AccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.background, justifyContent: 'space-between' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -35,9 +35,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 20,
     marginHorizontal: 24,
+    marginBottom: 24,
     paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 614,
   },
   logoutText: { color: colors.text, fontFamily: fonts.semiBold },
 });

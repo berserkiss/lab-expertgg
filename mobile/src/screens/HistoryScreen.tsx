@@ -1,38 +1,27 @@
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import BetCard from '../components/BetCard';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
-import { fetchHistory, VoteHistoryItem } from '../api/votes';
+import LoadingState from '../components/LoadingState';
+import { useFetchList } from '../hooks/useFetchList';
+import { fetchHistory } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
-const STATUS_LABEL: Record<string, string> = { win: 'Win', lose: 'Lose', active: 'Active' };
-const STATUS_COLOR: Record<string, string> = { win: colors.win, lose: colors.lose, active: colors.active };
-
 export default function HistoryScreen() {
-  const [items, setItems] = useState<VoteHistoryItem[]>([]);
-  const [error, setError] = useState(false);
-
-  const load = useCallback(() => {
-    fetchHistory()
-      .then(data => {
-        setItems(data);
-        setError(false);
-      })
-      .catch(() => setError(true));
-  }, []);
-
-  useFocusEffect(load);
+  const { items, error, loading, reload } = useFetchList(fetchHistory);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>History</Text>
       </View>
-      {error ? (
-        <ErrorState onRetry={load} />
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : items.length === 0 ? (
         <EmptyState label="No History" />
       ) : (
@@ -40,29 +29,7 @@ export default function HistoryScreen() {
           data={items}
           keyExtractor={i => String(i.id)}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <View style={styles.rowBetween}>
-                <View style={[styles.statusBadge, { backgroundColor: STATUS_COLOR[item.status] }]}>
-                  <Text style={styles.statusText}>{STATUS_LABEL[item.status]}</Text>
-                </View>
-                <Text style={styles.muted}>
-                  {item.match.tournament.game.name}: {item.match.tournament.name}
-                </Text>
-              </View>
-              <View style={styles.rowBetween}>
-                <Text style={styles.teamName}>{item.match.team_a.name}</Text>
-                <Text style={styles.teamName}>{item.match.team_b.name}</Text>
-              </View>
-              <View style={styles.rowBetween}>
-                <Text style={styles.muted}>{new Date(item.created_at).toLocaleString()}</Text>
-                <Text style={[styles.amount, { color: STATUS_COLOR[item.status] }]}>
-                  {item.status === 'win' ? '+' : ''}
-                  {item.amount} gg
-                </Text>
-              </View>
-            </View>
-          )}
+          renderItem={({ item }) => <BetCard item={item} />}
         />
       )}
     </SafeAreaView>
@@ -79,18 +46,4 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16 },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: 12,
-    marginBottom: 12,
-  },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  statusBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  statusText: { color: colors.background, fontSize: 11, fontFamily: fonts.bold },
-  muted: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.regular },
-  teamName: { color: colors.text, fontFamily: fonts.semiBold },
-  amount: { fontFamily: fonts.bold },
 });

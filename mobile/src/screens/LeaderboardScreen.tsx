@@ -1,37 +1,28 @@
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
+import LoadingState from '../components/LoadingState';
 import { useAuth } from '../context/AuthContext';
-import { fetchLeaderboard, LeaderboardEntry } from '../api/votes';
+import { useFetchList } from '../hooks/useFetchList';
+import { fetchLeaderboard } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
-  const [items, setItems] = useState<LeaderboardEntry[]>([]);
-  const [error, setError] = useState(false);
-
-  const load = useCallback(() => {
-    fetchLeaderboard()
-      .then(data => {
-        setItems(data);
-        setError(false);
-      })
-      .catch(() => setError(true));
-  }, []);
-
-  useFocusEffect(load);
+  const { items, error, loading, reload } = useFetchList(fetchLeaderboard);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Leaderboard</Text>
       </View>
-      {error ? (
-        <ErrorState onRetry={load} />
+      {loading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState onRetry={reload} />
       ) : items.length === 0 ? (
         <EmptyState label="No Leaders" />
       ) : (
