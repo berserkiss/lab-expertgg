@@ -35,7 +35,6 @@ export default function MainTabs() {
           backgroundColor: colors.navBackground,
           borderTopColor: colors.navBackground,
           paddingHorizontal: 12,
-          paddingTop: 8,
           paddingBottom: 10,
         },
         tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 11 },
