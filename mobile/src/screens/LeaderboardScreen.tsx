@@ -17,17 +17,20 @@ import { fonts } from '../theme/fonts';
 // real, measured viewport makes "8 fit, the rest scroll" true on every
 // device, not just the one used for testing.
 //
-// The list has NO top padding of its own (the header's own bottom padding
-// already gives breathing room above row 1) so that row index and scroll
-// offset stay in exact lockstep: row `i` always starts at content position
-// `i * rowHeight`, with no separate constant to keep in sync at the edges.
+// The list has NO top or bottom padding of its own, and rowHeight is
+// exactly listHeight/8 with no reserved slack - so 8 rows always fill the
+// viewport exactly, at ANY scroll position, not just at the very top or
+// very bottom of the list. Earlier versions reserved extra space in
+// rowHeight's formula to leave a bigger gap after the true last row, but
+// that reserved space then showed up as an unwanted sliver of the next
+// row peeking in at any OTHER scroll position (e.g. landing on rank 1
+// with more entries below) - a fixed rowHeight can't reserve trailing
+// space only sometimes, so nothing is reserved, and AccountScreen's
+// logoutButton.marginBottom is matched to ROW_GAP instead of a bigger
+// value, to keep the two screens' bottom spacing consistent.
 const TARGET_VISIBLE_ROWS = 8;
 const ROW_GAP = 10;
 const AVATAR_SIZE = 32;
-// Matches AccountScreen's logoutButton.marginBottom - that value was tuned
-// to align with this list's last-row bottom edge, so the two tabs feel
-// consistent when switching between them. Keep the two in sync.
-const LIST_BOTTOM_PADDING = 33;
 const MIN_ROW_PADDING = 4;
 // Reasonable card height for the single frame before the list is measured -
 // overwritten the instant onLayout fires.
@@ -41,12 +44,7 @@ export default function LeaderboardScreen() {
 
   const myIndex = user ? items.findIndex(item => item.username === user.username) : -1;
 
-  // The last row's own marginBottom (ROW_GAP) already counts toward the
-  // trailing gap, so only the remainder needs to come from rowHeight's
-  // budget - see contentContainerStyle below, which adds exactly that
-  // remainder as paddingBottom.
-  const usableHeight = Math.max(0, listHeight - LIST_BOTTOM_PADDING + ROW_GAP);
-  const rowHeight = usableHeight > 0 ? usableHeight / TARGET_VISIBLE_ROWS : FALLBACK_ROW_HEIGHT;
+  const rowHeight = listHeight > 0 ? listHeight / TARGET_VISIBLE_ROWS : FALLBACK_ROW_HEIGHT;
   const rowPaddingVertical = Math.max(MIN_ROW_PADDING, (rowHeight - ROW_GAP - AVATAR_SIZE) / 2);
 
   // Jump straight to the logged-in user's row once the list loads, so a
@@ -115,10 +113,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16 },
   title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
-  // No paddingTop - see the note above the constants. The last row already
-  // carries its own ROW_GAP via marginBottom, so only the remainder is added
-  // here to bring the total trailing gap up to LIST_BOTTOM_PADDING.
-  list: { paddingHorizontal: 16, paddingBottom: LIST_BOTTOM_PADDING - ROW_GAP },
+  // No top/bottom padding - see the note above the constants.
+  list: { paddingHorizontal: 16 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

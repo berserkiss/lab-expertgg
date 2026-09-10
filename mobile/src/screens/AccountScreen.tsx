@@ -37,10 +37,10 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     height: 50,
     marginHorizontal: 24,
-    // Matches the Leaderboard list's last-row bottom edge (measured live -
-    // see Figma DK. Account) so the two tabs feel aligned when switching
-    // between them, rather than the button sitting flush at the screen edge.
-    marginBottom: 33,
+    // Matches the Leaderboard list's row gap (ROW_GAP in LeaderboardScreen)
+    // so the two tabs feel aligned when switching between them, rather than
+    // the button sitting flush at the screen edge.
+    marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
