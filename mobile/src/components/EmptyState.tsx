@@ -7,7 +7,7 @@ import { fonts } from '../theme/fonts';
 export default function EmptyState({ label }: { label: string }) {
   return (
     <View style={styles.container}>
-      <SwordsIcon width={96} height={96} color={colors.textMuted} />
+      <SwordsIcon width={96} height={96} color={colors.textGray} />
       <Text style={styles.label}>{label}</Text>
     </View>
   );
@@ -15,5 +15,11 @@ export default function EmptyState({ label }: { label: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  label: { color: colors.textMuted, fontFamily: fonts.medium, fontSize: 20, marginTop: 20 },
+  label: {
+    color: colors.textGray,
+    fontFamily: fonts.regular,
+    fontSize: 32,
+    letterSpacing: -0.24,
+    marginTop: 20,
+  },
 });

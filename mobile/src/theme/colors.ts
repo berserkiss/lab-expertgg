@@ -10,6 +10,7 @@ export const colors = {
   primary: '#0166FE',
   text: '#FFFFFF',
   textMuted: '#8A93B8',
+  textGray: '#959595',
   win: '#2ECC71',
   lose: '#FF5C5C',
   active: '#F5A623',
