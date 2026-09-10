@@ -31,11 +31,19 @@ import { typography } from '../theme/typography';
 // value, to keep the two screens' bottom spacing consistent.
 const TARGET_VISIBLE_ROWS = 8;
 const ROW_GAP = 16;
-const AVATAR_SIZE = 32;
 const MIN_ROW_PADDING = 4;
+const MIN_AVATAR_SIZE = 22;
+const MAX_AVATAR_SIZE = 40;
 // Reasonable card height for the single frame before the list is measured -
 // overwritten the instant onLayout fires.
 const FALLBACK_ROW_HEIGHT = 84;
+// Fraction of the card (excluding the trailing gap) taken up by the avatar
+// at the reference size above - keeps the avatar-to-padding ratio the same
+// on every screen instead of just capping the avatar so it never overflows.
+// A fixed avatar size looked fine on a tall screen but ate almost the whole
+// card - leaving barely any padding - on a shorter one (e.g. a 4.65" AVD),
+// because rowHeight shrinks with the screen while a fixed size doesn't.
+const AVATAR_RATIO = 32 / (FALLBACK_ROW_HEIGHT - ROW_GAP);
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
@@ -46,7 +54,8 @@ export default function LeaderboardScreen() {
   const myIndex = user ? items.findIndex(item => item.username === user.username) : -1;
 
   const rowHeight = listHeight > 0 ? listHeight / TARGET_VISIBLE_ROWS : FALLBACK_ROW_HEIGHT;
-  const rowPaddingVertical = Math.max(MIN_ROW_PADDING, (rowHeight - ROW_GAP - AVATAR_SIZE) / 2);
+  const avatarSize = Math.min(MAX_AVATAR_SIZE, Math.max(MIN_AVATAR_SIZE, (rowHeight - ROW_GAP) * AVATAR_RATIO));
+  const rowPaddingVertical = Math.max(MIN_ROW_PADDING, (rowHeight - ROW_GAP - avatarSize) / 2);
 
   // Jump straight to the logged-in user's row once the list loads, so a
   // player ranked far down doesn't have to scroll to find themselves -
@@ -91,13 +100,19 @@ export default function LeaderboardScreen() {
           onLayout={e => setListHeight(e.nativeEvent.layout.height)}
           renderItem={({ item, index }) => {
             const isMe = !!user && item.username === user.username;
+            const avatarStyle = {
+              width: avatarSize,
+              height: avatarSize,
+              borderRadius: avatarSize / 2,
+              marginRight: 12,
+            };
             return (
               <View style={[styles.row, { paddingVertical: rowPaddingVertical, marginBottom: ROW_GAP }]}>
                 <Text style={[styles.rank, isMe && styles.textMe]}>{index + 1}</Text>
                 {item.avatar ? (
-                  <Image source={{ uri: item.avatar }} style={styles.avatar} />
+                  <Image source={{ uri: item.avatar }} style={avatarStyle} />
                 ) : (
-                  <View style={styles.avatarPlaceholder} />
+                  <View style={[avatarStyle, styles.avatarPlaceholder]} />
                 )}
                 <Text style={[styles.username, isMe && styles.textMe]}>{item.username}</Text>
                 <Text style={styles.balance}>{item.balance} gg</Text>
@@ -124,14 +139,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   rank: { color: colors.text, width: 20, fontFamily: fonts.semiBold, fontSize: typography.label.fontSize },
-  avatar: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, marginRight: 12 },
-  avatarPlaceholder: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    marginRight: 12,
-    backgroundColor: colors.cardBorder,
-  },
+  // Size comes from the dynamic avatarStyle computed in renderItem.
+  avatarPlaceholder: { backgroundColor: colors.cardBorder },
   username: { color: colors.text, flex: 1, fontFamily: fonts.semiBold, fontSize: typography.label.fontSize },
   textMe: { color: colors.primary },
   balance: { color: colors.text, fontFamily: fonts.semiBold, fontSize: typography.label.fontSize },
