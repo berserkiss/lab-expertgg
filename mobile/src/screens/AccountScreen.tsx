@@ -1,9 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Button from '../components/Button';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 export default function AccountScreen() {
   const { logout } = useAuth();
@@ -14,9 +16,7 @@ export default function AccountScreen() {
         <Text style={styles.title}>Account</Text>
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-        <Text style={styles.logoutText}>Log out</Text>
-      </TouchableOpacity>
+      <Button label="Log out" variant="outline" onPress={logout} style={styles.logoutButton} />
     </SafeAreaView>
   );
 }
@@ -29,22 +29,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  title: { color: colors.text, fontSize: 34, lineHeight: 41, fontFamily: fonts.bold },
+  title: { color: colors.text, ...typography.h1, fontFamily: fonts.bold },
   logoutButton: {
-    borderColor: colors.primary,
-    borderWidth: 1,
-    // Same size as SignInScreen's "Log in" button: height 50, radius 24,
-    // and the same 46dp side inset SignInScreen gets from its container's
-    // paddingHorizontal.
-    borderRadius: 24,
-    height: 50,
+    // Same 46dp side inset SignInScreen gets from its container's
+    // paddingHorizontal, so the two buttons line up edge to edge.
     marginHorizontal: 46,
     // Matches the Leaderboard list's row gap (ROW_GAP in LeaderboardScreen)
     // so the two tabs feel aligned when switching between them, rather than
     // the button sitting flush at the screen edge.
     marginBottom: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  logoutText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 16 },
 });

@@ -9,6 +9,7 @@ import { useFetchList } from '../hooks/useFetchList';
 import { fetchLeaderboard, LeaderboardEntry } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 // The design calls for exactly 8 rows visible at once, with any further
 // entries reachable by scrolling - so row height is derived from the
@@ -112,7 +113,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16 },
-  title: { color: colors.text, fontSize: 34, lineHeight: 41, fontFamily: fonts.bold },
+  title: { color: colors.text, ...typography.h1, fontFamily: fonts.bold },
   // No top/bottom padding - see the note above the constants.
   list: { paddingHorizontal: 16 },
   row: {
@@ -122,7 +123,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
   },
-  rank: { color: colors.text, width: 20, fontFamily: fonts.semiBold, fontSize: 14 },
+  rank: { color: colors.text, width: 20, fontFamily: fonts.semiBold, fontSize: typography.label.fontSize },
   avatar: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, marginRight: 12 },
   avatarPlaceholder: {
     width: AVATAR_SIZE,
@@ -131,7 +132,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     backgroundColor: colors.cardBorder,
   },
-  username: { color: colors.text, flex: 1, fontFamily: fonts.semiBold, fontSize: 14 },
+  username: { color: colors.text, flex: 1, fontFamily: fonts.semiBold, fontSize: typography.label.fontSize },
   textMe: { color: colors.primary },
-  balance: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 14 },
+  balance: { color: colors.text, fontFamily: fonts.semiBold, fontSize: typography.label.fontSize },
 });

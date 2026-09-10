@@ -7,6 +7,7 @@ import { fetchMatchBets } from '../api/matches';
 import { VoteHistoryItem } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 export default function BookScreen({ route, navigation }: any) {
   const { matchId } = route.params;
@@ -47,7 +48,7 @@ export default function BookScreen({ route, navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-  back: { color: colors.text, fontSize: 20 },
-  title: { color: colors.text, fontSize: 18, fontFamily: fonts.bold },
+  back: { color: colors.text, fontSize: typography.h3.fontSize },
+  title: { color: colors.text, fontSize: typography.h4.fontSize, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16 },
 });

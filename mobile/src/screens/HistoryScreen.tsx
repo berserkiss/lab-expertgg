@@ -9,6 +9,7 @@ import { useFetchList } from '../hooks/useFetchList';
 import { fetchHistory } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 export default function HistoryScreen() {
   const { items, error, loading, reload } = useFetchList(fetchHistory);
@@ -44,6 +45,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  title: { color: colors.text, fontSize: 34, lineHeight: 41, fontFamily: fonts.bold },
+  title: { color: colors.text, ...typography.h1, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16 },
 });

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { fetchMatch, Match, placeVote, Team } from '../api/matches';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0'];
 const WIN_BONUS = 2;
@@ -130,9 +131,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  back: { color: colors.text, fontSize: 20 },
-  title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
-  tournament: { color: colors.textMuted, fontSize: 12, textAlign: 'center', marginBottom: 8, fontFamily: fonts.regular },
+  back: { color: colors.text, fontSize: typography.h3.fontSize },
+  title: { color: colors.text, fontSize: typography.h2.fontSize, fontFamily: fonts.bold },
+  tournament: {
+    color: colors.textMuted,
+    fontSize: typography.small.fontSize,
+    textAlign: 'center',
+    marginBottom: 8,
+    fontFamily: fonts.regular,
+  },
   matchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -154,13 +161,19 @@ const styles = StyleSheet.create({
   vs: { color: colors.textMuted, marginHorizontal: 8, fontFamily: fonts.regular },
   winsText: { color: colors.text, textAlign: 'center', marginBottom: 12, fontFamily: fonts.regular },
   stakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  stepper: { color: colors.text, fontSize: 24, paddingHorizontal: 16, fontFamily: fonts.regular },
-  stakeValue: { color: colors.text, fontSize: 20, fontFamily: fonts.bold, minWidth: 60, textAlign: 'center' },
+  stepper: { color: colors.text, fontSize: typography.h2.fontSize, paddingHorizontal: 16, fontFamily: fonts.regular },
+  stakeValue: {
+    color: colors.text,
+    fontSize: typography.h3.fontSize,
+    fontFamily: fonts.bold,
+    minWidth: 60,
+    textAlign: 'center',
+  },
   smallButton: { marginLeft: 12, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.card, borderRadius: 8 },
   smallButtonText: { color: colors.text, fontFamily: fonts.regular },
   keypad: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16 },
   key: { width: '25%', paddingVertical: 16, alignItems: 'center' },
-  keyText: { color: colors.text, fontSize: 18, fontFamily: fonts.regular },
+  keyText: { color: colors.text, fontSize: typography.h4.fontSize, fontFamily: fonts.regular },
   voteButton: {
     width: '25%',
     backgroundColor: colors.coin,
@@ -168,5 +181,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 8,
   },
-  voteButtonText: { color: colors.background, fontFamily: fonts.bold, fontSize: 11, textAlign: 'center' },
+  voteButtonText: { color: colors.background, fontFamily: fonts.bold, fontSize: typography.tiny.fontSize, textAlign: 'center' },
 });

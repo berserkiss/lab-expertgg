@@ -8,6 +8,7 @@ import { useFetchList } from '../hooks/useFetchList';
 import { useNow } from '../hooks/useNow';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 import { fetchMatches } from '../api/matches';
 import { formatCountdown } from '../utils/countdown';
 
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  title: { color: colors.text, fontSize: 34, lineHeight: 41, fontFamily: fonts.bold },
+  title: { color: colors.text, ...typography.h1, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
   card: {
     backgroundColor: colors.card,
@@ -100,12 +101,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  tournament: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.regular },
+  tournament: { color: colors.textMuted, fontSize: typography.small.fontSize, fontFamily: fonts.regular },
   bookBadge: { backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  bookBadgeText: { color: colors.text, fontSize: 11, fontFamily: fonts.semiBold },
+  bookBadgeText: { color: colors.text, fontSize: typography.tiny.fontSize, fontFamily: fonts.semiBold },
   teamsRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  teamName: { color: colors.text, fontSize: 15, fontFamily: fonts.semiBold, flex: 1 },
+  teamName: { color: colors.text, fontSize: typography.bodySmall.fontSize, fontFamily: fonts.semiBold, flex: 1 },
   teamNameRight: { textAlign: 'right' },
   vs: { color: colors.textMuted, marginHorizontal: 8, fontFamily: fonts.regular },
-  countdown: { color: colors.textMuted, fontSize: 12, textAlign: 'center', fontFamily: fonts.regular },
+  countdown: { color: colors.textMuted, fontSize: typography.small.fontSize, textAlign: 'center', fontFamily: fonts.regular },
 });

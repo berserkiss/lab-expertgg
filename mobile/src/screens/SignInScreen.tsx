@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import AuthBackground from '../components/AuthBackground';
+import Button from '../components/Button';
 import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 interface FormErrors {
   email?: string;
@@ -82,13 +84,7 @@ export default function SignInScreen() {
 
       {errors.general && <Text style={[styles.errorText, styles.generalError]}>{errors.general}</Text>}
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
-        {loading ? (
-          <ActivityIndicator color={colors.text} />
-        ) : (
-          <Text style={styles.buttonText}>Log in</Text>
-        )}
-      </TouchableOpacity>
+      <Button label="Log in" onPress={handleSubmit} disabled={loading} loading={loading} style={styles.button} />
     </AuthBackground>
   );
 }
@@ -114,23 +110,15 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.lose,
     fontFamily: fonts.regular,
-    fontSize: 12,
+    fontSize: typography.small.fontSize,
     marginTop: 4,
     marginLeft: 4,
   },
   generalError: {
     textAlign: 'center',
-    fontSize: 13,
+    fontSize: typography.caption.fontSize,
     marginTop: -6,
     marginBottom: 8,
   },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 24,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 8,
-  },
-  buttonText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 16 },
+  button: { marginTop: 8 },
 });

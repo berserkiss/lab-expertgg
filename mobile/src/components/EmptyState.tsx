@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import SwordsIcon from '../assets/swords.svg';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 export default function EmptyState({ label }: { label: string }) {
   return (
@@ -18,7 +19,7 @@ const styles = StyleSheet.create({
   label: {
     color: colors.textGray,
     fontFamily: fonts.regular,
-    fontSize: 32,
+    fontSize: typography.display.fontSize,
     letterSpacing: -0.24,
     marginTop: 20,
   },

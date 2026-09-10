@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { VoteHistoryItem } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 const STATUS_LABEL: Record<string, string> = { win: 'Win', lose: 'Lose', active: 'Active' };
 const STATUS_COLOR: Record<string, string> = { win: colors.win, lose: colors.lose, active: colors.active };
@@ -45,8 +46,8 @@ const styles = StyleSheet.create({
   },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   statusBadge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  statusText: { color: colors.background, fontSize: 11, fontFamily: fonts.bold },
-  muted: { color: colors.textMuted, fontSize: 12, fontFamily: fonts.regular },
+  statusText: { color: colors.background, fontSize: typography.tiny.fontSize, fontFamily: fonts.bold },
+  muted: { color: colors.textMuted, fontSize: typography.small.fontSize, fontFamily: fonts.regular },
   teamName: { color: colors.text, fontFamily: fonts.semiBold },
   amount: { fontFamily: fonts.bold },
 });

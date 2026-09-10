@@ -11,6 +11,7 @@ import TrophyIcon from '../assets/nav/trophy.svg';
 import UserIcon from '../assets/nav/user.svg';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 const Tab = createBottomTabNavigator();
 
@@ -48,7 +49,7 @@ export default function MainTabs() {
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.75}
-            style={{ fontFamily: fonts.medium, fontSize: 12, color }}>
+            style={{ fontFamily: fonts.medium, fontSize: typography.small.fontSize, color }}>
             {children}
           </Text>
         ),

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
+import { typography } from '../theme/typography';
 
 export default function ErrorState({
   message = 'Something went wrong. Check your connection.',
@@ -27,7 +28,7 @@ const styles = StyleSheet.create({
   message: {
     color: colors.lose,
     fontFamily: fonts.regular,
-    fontSize: 15,
+    fontSize: typography.bodySmall.fontSize,
     textAlign: 'center',
     marginBottom: 16,
   },
