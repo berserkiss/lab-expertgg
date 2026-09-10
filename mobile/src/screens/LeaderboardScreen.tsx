@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 16,
   },
-  rank: { color: colors.textMuted, width: 20, fontFamily: fonts.semiBold },
+  rank: { color: colors.text, width: 20, fontFamily: fonts.semiBold, fontSize: 14 },
   avatar: { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, marginRight: 12 },
   avatarPlaceholder: {
     width: AVATAR_SIZE,
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
     backgroundColor: colors.cardBorder,
   },
-  username: { color: colors.text, flex: 1, fontFamily: fonts.semiBold },
+  username: { color: colors.text, flex: 1, fontFamily: fonts.semiBold, fontSize: 14 },
   textMe: { color: colors.primary },
-  balance: { color: colors.text, fontFamily: fonts.semiBold },
+  balance: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 14 },
 });
