@@ -29,7 +29,7 @@ import { fonts } from '../theme/fonts';
 // logoutButton.marginBottom is matched to ROW_GAP instead of a bigger
 // value, to keep the two screens' bottom spacing consistent.
 const TARGET_VISIBLE_ROWS = 8;
-const ROW_GAP = 10;
+const ROW_GAP = 16;
 const AVATAR_SIZE = 32;
 const MIN_ROW_PADDING = 4;
 // Reasonable card height for the single frame before the list is measured -

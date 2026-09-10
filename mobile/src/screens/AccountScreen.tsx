@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     // Matches the Leaderboard list's row gap (ROW_GAP in LeaderboardScreen)
     // so the two tabs feel aligned when switching between them, rather than
     // the button sitting flush at the screen edge.
-    marginBottom: 10,
+    marginBottom: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
