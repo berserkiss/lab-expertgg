@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
+  title: { color: colors.text, fontSize: 34, lineHeight: 41, fontFamily: fonts.bold },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
   card: {
     backgroundColor: colors.card,

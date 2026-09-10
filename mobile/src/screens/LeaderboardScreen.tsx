@@ -112,7 +112,7 @@ export default function LeaderboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { padding: 16 },
-  title: { color: colors.text, fontSize: 24, fontFamily: fonts.bold },
+  title: { color: colors.text, fontSize: 34, lineHeight: 41, fontFamily: fonts.bold },
   // No top/bottom padding - see the note above the constants.
   list: { paddingHorizontal: 16 },
   row: {
