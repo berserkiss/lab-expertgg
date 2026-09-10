@@ -35,13 +35,7 @@ export default function MainTabs() {
         // clipped by the corner radius, which the emulator doesn't simulate.
         tabBarStyle: {
           backgroundColor: colors.navBackground,
-          // A visible (not same-as-background) top border, so the boundary
-          // between scrollable content and the tab bar is unambiguous even
-          // when the content directly above happens to share navBackground's
-          // color (e.g. the leaderboard's row cards) and the gap between
-          // them is thin.
-          borderTopColor: colors.cardBorder,
-          borderTopWidth: 1,
+          borderTopColor: colors.navBackground,
           paddingHorizontal: 4,
           paddingBottom: 10,
         },
