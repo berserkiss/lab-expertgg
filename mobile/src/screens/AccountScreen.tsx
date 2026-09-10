@@ -33,10 +33,12 @@ const styles = StyleSheet.create({
   logoutButton: {
     borderColor: colors.primary,
     borderWidth: 1,
-    // Same size as SignInScreen's "Log in" button (height 50, radius 24).
+    // Same size as SignInScreen's "Log in" button: height 50, radius 24,
+    // and the same 46dp side inset SignInScreen gets from its container's
+    // paddingHorizontal.
     borderRadius: 24,
     height: 50,
-    marginHorizontal: 24,
+    marginHorizontal: 46,
     // Matches the Leaderboard list's row gap (ROW_GAP in LeaderboardScreen)
     // so the two tabs feel aligned when switching between them, rather than
     // the button sitting flush at the screen edge.
@@ -44,5 +46,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoutText: { color: colors.text, fontFamily: fonts.semiBold },
+  logoutText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: 16 },
 });
