@@ -1,4 +1,5 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AccountStack from './AccountStack';
 import PlayStack from './PlayStack';
@@ -37,10 +38,20 @@ export default function MainTabs() {
           paddingHorizontal: 4,
           paddingBottom: 10,
         },
-        // "Leaderboard" is the longest label - on a narrower real device the
-        // outer padding above left it without enough room and it truncated
-        // to "Leaderboar...". Dropped a point to give it headroom everywhere.
-        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: 10 },
+        // "Leaderboard" is the longest label - fixing every label to a small
+        // enough size to never truncate it makes the other three look
+        // undersized next to the design. Instead render the full-size label
+        // and let it shrink on its own, only as much as it needs to, only on
+        // the tab(s) that don't have room at full size.
+        tabBarLabel: ({ color, children }) => (
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+            style={{ fontFamily: fonts.medium, fontSize: 12, color }}>
+            {children}
+          </Text>
+        ),
         tabBarIcon: ({ color }) => {
           const Icon = ICONS[route.name];
           return <Icon width={22} height={22} color={color} />;
