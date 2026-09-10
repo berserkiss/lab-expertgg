@@ -12,7 +12,11 @@ export default function AuthBackground({
 }) {
   return (
     <LinearGradient
-      colors={[colors.authGradientStart, colors.authGradientEnd]}
+      // Brighter navy at the top fading to near-black at the bottom - see
+      // Figma DK. Splashscreen/SignIn.
+      colors={[colors.authGradientEnd, colors.authGradientStart]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
       style={[styles.fill, style]}>
       {children}
     </LinearGradient>
