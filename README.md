@@ -1,8 +1,9 @@
 # Lab Expertgg
 
-Мобильное приложение для прогнозов на киберспортивные матчи (CS, LoL) с виртуальной валютой gg.
+A mobile app for predicting esports matches (CS, LoL) using a virtual
+in-app currency, gg.
 
-## Структура репозитория
+## Repository structure
 
 ```
 lab-expertgg/
@@ -10,18 +11,18 @@ lab-expertgg/
 └── mobile/      # React Native (Android)
 ```
 
-## Стек
+## Stack
 
 - Backend: Python / Django / Django REST Framework / PostgreSQL
 - Mobile: React Native
-- Хостинг: Digital Ocean (1 Droplet)
-- CI/CD: GitLab CI
+- Hosting: Digital Ocean (1 Droplet)
+- CI/CD: GitLab CI (primary) + a mirrored GitHub Actions workflow
 
-## Локальная разработка
+## Local development
 
 ### Backend
 
-```
+```bash
 cd backend
 python -m venv venv
 venv\Scripts\activate
@@ -33,7 +34,7 @@ python manage.py runserver
 
 ### Mobile
 
-```
+```bash
 cd mobile
 npm install
 npx react-native run-android
