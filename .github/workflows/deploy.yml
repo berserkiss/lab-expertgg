@@ -1,0 +1,23 @@
+name: Deploy backend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          eval $(ssh-agent -s)
+          echo "$DEPLOY_SSH_KEY" | tr -d '\r' | ssh-add -
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          ssh root@$DEPLOY_HOST "cd /root/lab-expertgg && git fetch origin main && git reset --hard origin/main && cd backend && source venv/bin/activate && pip install -q -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput && systemctl restart expertgg && systemctl is-active expertgg"
