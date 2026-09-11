@@ -1,7 +1,7 @@
 # Lab Expertgg
 
-A mobile app for predicting esports matches (CS, LoL) using a virtual
-in-app currency, gg.
+A mobile app for predicting esports matches (CS, LoL), where you bet with a
+virtual in-app currency called gg.
 
 ## Repository structure
 
@@ -16,7 +16,7 @@ lab-expertgg/
 - Backend: Python / Django / Django REST Framework / PostgreSQL
 - Mobile: React Native
 - Hosting: Digital Ocean (1 Droplet)
-- CI/CD: GitLab CI (primary) + a mirrored GitHub Actions workflow
+- CI/CD: GitLab CI (primary), plus a mirrored GitHub Actions workflow
 
 ## Local development
 
