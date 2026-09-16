@@ -1,5 +1,4 @@
 from django.db import transaction
-from django.utils import timezone
 from rest_framework import serializers
 
 from apps.matches.models import Match
@@ -22,7 +21,10 @@ class VoteCreateSerializer(serializers.ModelSerializer):
 
         if stake < 1:
             raise serializers.ValidationError({"stake": "Stake must be at least 1 gg."})
-        if match.status != Match.Status.UPCOMING or match.start_time <= timezone.now():
+        # Betting is allowed on upcoming AND live matches (not finished) -
+        # status is the source of truth here, not start_time, since a live
+        # match's start_time is necessarily already in the past.
+        if match.status not in (Match.Status.UPCOMING, Match.Status.LIVE):
             raise serializers.ValidationError("Betting is closed for this match.")
         if team.id not in (match.team_a_id, match.team_b_id):
             raise serializers.ValidationError({"predicted_team": "This team is not playing in this match."})
