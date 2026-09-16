@@ -152,5 +152,35 @@ Per the demo video vs. the actual Figma target, these are NOT required:
    only above)
 2. Does match resolution (winner) come from PandaScore automatically, or
    stay a manual admin action? (defaulted to automatic above)
-3. Profile display name: reuse an existing field or add `display_name`?
-   (needs a quick look at `accounts.User` before implementing)
+3. ~~Profile display name: reuse an existing field or add `display_name`?~~
+   **Resolved**: `User.username` is already the display-name field the
+   client reads (`api/auth.ts`'s `User.username`, matched against in
+   `LeaderboardScreen`) — reuse it, no new column needed.
+
+## 6. Progress log
+
+- **Mobile**: new Figma-exported assets (`wallet.svg`, `coins.svg`,
+  `coins-glow.svg`, `film.svg`, `clock.svg`) added under
+  `mobile/src/assets/`. `colors.win`/`colors.lose` corrected to the real
+  Figma values (`#12CC46`/`#FF383C`). New shared `BalanceBadge` component
+  (money-bag icon + `{balance} gg`) wired into the header of all 4 tabs
+  (Play/History/Leaderboard/Account) + GetCoins, matching every Figma
+  frame. Play's match-card countdown now has the clock icon. GetCoins got
+  its illustration (coins + glow) and the film icon on its button — still
+  visually only, no backend wiring (stays out of scope, see §3).
+- **Backend**: `apps/matches/pandascore.py` (API client) +
+  `sync_pandascore` management command implemented. Added nullable
+  `external_id` to `Tournament`/`Team`/`Match` for idempotent upserts
+  (migration `0003`). Verified the token works against the live API
+  (`GET /matches` for `cs-go`/`not_started` returned real data). **Not yet
+  verified end-to-end against the DB** — local Postgres isn't running in
+  this environment; run `python manage.py migrate` then
+  `python manage.py sync_pandascore` once it's up, and check Django admin
+  for synced matches.
+- **Noted discrepancy, not yet acted on**: the "Play/with match" Figma
+  frame shows the bet-placement UI expanding *inline* on the Play list
+  (the selected match's keypad appears in place, with the next match's
+  card still visible below it), whereas the current code navigates to a
+  separate `MatchVoteScreen`. Functionally equivalent, visually different -
+  flag if the inline layout matters, otherwise leaving the separate-screen
+  version as-is.
