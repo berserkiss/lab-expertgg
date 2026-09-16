@@ -12,9 +12,20 @@ class GameSerializer(serializers.ModelSerializer):
 
 
 class TeamSerializer(serializers.ModelSerializer):
+    # A locally-uploaded `logo` file wins if present; otherwise fall back to
+    # PandaScore's hosted logo_url for teams synced from the feed.
+    logo = serializers.SerializerMethodField()
+
     class Meta:
         model = Team
         fields = ("id", "name", "logo")
+
+    def get_logo(self, obj):
+        if obj.logo:
+            request = self.context.get("request")
+            url = obj.logo.url
+            return request.build_absolute_uri(url) if request else url
+        return obj.logo_url
 
 
 class TournamentSerializer(serializers.ModelSerializer):

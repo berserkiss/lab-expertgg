@@ -116,6 +116,9 @@ class Command(BaseCommand):
     def _upsert_team(self, team_data):
         team, _ = Team.objects.update_or_create(
             external_id=str(team_data["id"]),
-            defaults={"name": team_data.get("name", "Unknown")},
+            defaults={
+                "name": team_data.get("name", "Unknown"),
+                "logo_url": team_data.get("image_url"),
+            },
         )
         return team

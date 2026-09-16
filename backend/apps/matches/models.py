@@ -25,6 +25,10 @@ class Tournament(models.Model):
 class Team(models.Model):
     name = models.CharField(max_length=100)
     logo = models.ImageField(upload_to="teams/", null=True, blank=True)
+    # PandaScore's own hosted logo URL (opponent.image_url) for teams synced
+    # from the feed - used when no locally-uploaded `logo` file exists (see
+    # TeamSerializer.get_logo).
+    logo_url = models.URLField(max_length=500, null=True, blank=True)
     # PandaScore's opponent id - see Tournament.external_id.
     external_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
 
