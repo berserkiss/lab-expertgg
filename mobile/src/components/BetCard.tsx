@@ -37,7 +37,7 @@ export default function BetCard({ item }: { item: VoteHistoryItem }) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.navBackground,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,

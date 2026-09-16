@@ -3,9 +3,11 @@ import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import BalanceBadge from '../components/BalanceBadge';
+import BackArrowIcon from '../assets/back-arrow.svg';
 import CoinsGlow from '../assets/coins-glow.svg';
 import CoinsIcon from '../assets/coins.svg';
 import FilmIcon from '../assets/film.svg';
+import SparkRay from '../assets/spark-ray.svg';
 import { useAuth } from '../context/AuthContext';
 import { claimAdReward, fetchAdRewardStatus } from '../api/wallet';
 import { colors } from '../theme/colors';
@@ -73,16 +75,20 @@ export default function GetCoinsScreen({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>{'<'}</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+          <BackArrowIcon width={12} height={21} />
         </TouchableOpacity>
-        <Text style={styles.title}>Get coins</Text>
+        <Text style={styles.title} pointerEvents="none">
+          Get coins
+        </Text>
         <BalanceBadge />
       </View>
       <View style={styles.body}>
         <View style={styles.panel}>
           <Text style={styles.freeCoins}>Free Coins</Text>
           <View style={styles.illustration}>
+            <SparkRay width={140} height={82} style={styles.sparkA} />
+            <SparkRay width={140} height={82} style={styles.sparkB} />
             <CoinsGlow width={100} height={100} style={styles.glow} />
             <CoinsIcon width={100} height={100} />
           </View>
@@ -110,13 +116,25 @@ export default function GetCoinsScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
-  back: { color: colors.text, fontSize: typography.h3.fontSize },
-  title: { color: colors.text, fontSize: typography.h4.fontSize, fontFamily: fonts.bold },
+  back: { padding: 4 },
+  // Absolutely centered on the header regardless of how wide the back
+  // button or BalanceBadge (balance digits vary) end up - a plain flex
+  // row with space-between would only center it between them, not on
+  // the screen.
+  title: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    textAlign: 'center',
+    color: colors.text,
+    fontSize: typography.h4.fontSize,
+    fontFamily: fonts.bold,
+  },
   body: { flex: 1, alignItems: 'center', paddingHorizontal: 16, paddingTop: 16 },
   panel: {
     width: '100%',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: colors.navBackground,
     borderRadius: 16,
     paddingVertical: 32,
     marginBottom: 24,
@@ -124,6 +142,8 @@ const styles = StyleSheet.create({
   freeCoins: { color: colors.text, fontSize: typography.h3.fontSize, fontFamily: fonts.bold, marginBottom: 24 },
   illustration: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
   glow: { position: 'absolute' },
+  sparkA: { position: 'absolute' },
+  sparkB: { position: 'absolute', transform: [{ rotate: '90deg' }] },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
