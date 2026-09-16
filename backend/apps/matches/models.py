@@ -13,6 +13,10 @@ class Game(models.Model):
 class Tournament(models.Model):
     name = models.CharField(max_length=100)
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="tournaments")
+    # PandaScore's league id, when this tournament was synced from the feed
+    # rather than entered by hand in admin. Nullable so manually-created
+    # tournaments keep working.
+    external_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -21,6 +25,8 @@ class Tournament(models.Model):
 class Team(models.Model):
     name = models.CharField(max_length=100)
     logo = models.ImageField(upload_to="teams/", null=True, blank=True)
+    # PandaScore's opponent id - see Tournament.external_id.
+    external_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
 
     def __str__(self):
         return self.name
@@ -39,6 +45,8 @@ class Match(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.UPCOMING, db_index=True)
     winner = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     created_at = models.DateTimeField(auto_now_add=True)
+    # PandaScore's match id - see Tournament.external_id.
+    external_id = models.CharField(max_length=32, unique=True, null=True, blank=True)
 
     def __str__(self):
         return f"{self.team_a} vs {self.team_b}"

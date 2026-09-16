@@ -166,6 +166,15 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS", False)
 
 
+# PandaScore — match data feed (see apps/matches/pandascore.py and the
+# sync_pandascore management command). PANDASCORE_GAMES is a comma-separated
+# list of PandaScore videogame slugs to sync; Game.slug is set to match these
+# directly, so no separate external-id mapping is needed for Game itself.
+
+PANDASCORE_API_KEY = os.environ.get("PANDASCORE_API_KEY")
+PANDASCORE_GAMES = [g.strip() for g in os.environ.get("PANDASCORE_GAMES", "cs-go").split(",") if g.strip()]
+
+
 # HTTPS enforcement — only matters when DEBUG=False (local dev stays plain HTTP).
 # SECURE_PROXY_SSL_HEADER trusts Nginx's X-Forwarded-Proto so this doesn't
 # redirect-loop when Django sits behind the reverse proxy on the Droplet.
