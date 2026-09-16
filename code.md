@@ -27,7 +27,8 @@ of that is what we're building.** The actual target is the Figma flow
 - `votes`: `Vote` = a bet (user, match, predicted_team, stake, status
   active/win/lose, payout). Betting is **fully implemented and working**:
   `POST /api/matches/{id}/vote/` validates stake vs balance, match must be
-  `upcoming`, predicted_team must belong to the match. Atomic via
+  `upcoming` **or `live`** (see §3 — betting on live matches is in scope,
+  not just upcoming), predicted_team must belong to the match. Atomic via
   `select_for_update`.
 - `wallet`: `Wallet.balance` (the "gg" currency) + `CoinTransaction` ledger.
   Payout is **fixed-odds**: win = `stake * 2 + 2`, lose = `0`
@@ -130,15 +131,51 @@ Now concretely scoped by the Figma "DK. Account" + edit-profile mockup:
 
 Per the demo video vs. the actual Figma target, these are NOT required:
 - Game/date filter tabs on Play (stay hidden)
-- "Bet placed!" confirmation modal
-- "Get coins" ad-reward flow (stays a disconnected stub)
 - Settings screen
 - Sign-up / registration flow
 - Dota 2 / Valorant support (unless the open question above resolves to
   include more than CS)
-- Live in-match state / PandaScore WebSocket feed (free-tier REST polling
-  for schedules+results is sufficient; no need for real-time push)
+- PandaScore WebSocket live feed (free-tier REST polling for
+  schedules+results is sufficient; no need for real-time push)
 - Dynamic/market-based odds (fixed `stake*2+2` payout stays as-is)
+
+**Reversed from an earlier draft of this doc** (corrected per direct
+feedback, not just in chat):
+- **Betting on live matches is IN SCOPE**, not just upcoming. `votes/
+  serializers.py` now allows `match.status in (UPCOMING, LIVE)` — only
+  `FINISHED` closes betting. A live match's `start_time` is necessarily
+  already in the past, so status (not start_time) is the authoritative
+  check.
+- **"Bet placed!" confirmation banner is IN SCOPE.** Shown inline on the
+  Play screen for `CONFIRMATION_MS` (2.5s) after a successful vote: "Bet
+  placed! {stake} gg on {team}".
+- **The "Get coins" ad-reward flow is IN SCOPE and now fully wired**, not a
+  disconnected stub:
+  - Backend: `GET`/`POST /api/wallet/ad-reward/` (`apps/wallet/views.py`).
+    `GET` checks cooldown status without side effects; `POST` grants
+    `AD_REWARD_AMOUNT` (250 gg, matches the reference video's "+250 coins")
+    if the cooldown has elapsed, using the existing `CoinTransaction.Type.
+    AD_REWARD` ledger entry type (was defined but unused before). Cooldown
+    is derived from the most recent `AD_REWARD` transaction's timestamp, no
+    new field needed.
+  - **ASSUMPTION**: `AD_REWARD_COOLDOWN_SECONDS = 60` (a constant in
+    `apps/wallet/views.py`) — short on purpose so this is easy to demo
+    live; tune freely, nothing else depends on the exact value.
+  - Mobile: `GetCoinsScreen` fetches status on focus, runs a local 1s
+    countdown while on cooldown (button disabled, shows "Available in
+    Xs"), and calls the reward endpoint on tap when available, refreshing
+    the balance and showing a native "Success — +N coins added to your
+    balance!" alert (matches the reference video's wording).
+  - Reached from **any** tab: tapping the wallet-icon `BalanceBadge` (shown
+    in every screen's header) navigates to `GetCoins` under the Account
+    stack via `useNavigation().navigate('Account', {screen: 'GetCoins'})`
+    — not just from within the Account tab.
+- **Team logos come from PandaScore, not just uploaded files.** `Team`
+  gained a `logo_url` field (PandaScore's `opponent.image_url`, captured by
+  `sync_pandascore`); `TeamSerializer.logo` prefers a locally-uploaded
+  `logo` file if one exists, else falls back to `logo_url`. Teams PandaScore
+  doesn't have an image for (~22% in practice) still show the swords-icon
+  placeholder client-side.
 
 ## 4. Deliverables (from the assignment)
 
@@ -177,10 +214,37 @@ Per the demo video vs. the actual Figma target, these are NOT required:
   this environment; run `python manage.py migrate` then
   `python manage.py sync_pandascore` once it's up, and check Django admin
   for synced matches.
-- **Noted discrepancy, not yet acted on**: the "Play/with match" Figma
-  frame shows the bet-placement UI expanding *inline* on the Play list
-  (the selected match's keypad appears in place, with the next match's
-  card still visible below it), whereas the current code navigates to a
-  separate `MatchVoteScreen`. Functionally equivalent, visually different -
-  flag if the inline layout matters, otherwise leaving the separate-screen
-  version as-is.
+- **Resolved**: bet placement now expands *inline* on the Play list per the
+  "Play/with match" Figma frame (team highlight, keypad, Vote button,
+  countdown, all within the tapped match's card; other cards stay visible).
+  `MatchVoteScreen` and its route were removed — redundant once voting
+  moved into `PlayScreen` directly.
+- **Live-refresh**: `useFetchList` takes an optional `pollMs` and silently
+  re-fetches on that interval while a screen is focused (on top of its
+  existing focus/pull-to-refresh reload). Wired into Play/History/
+  Leaderboard at 15s, and `BalanceBadge` polls `refreshUser()` the same way
+  — match status, bet outcomes, rankings, and the header balance all update
+  on their own, no manual reload needed.
+- **Backend**: `MatchListView` now excludes `status=finished` — matches
+  can only be bet on while upcoming/live, so finished ones have no reason
+  to clutter the Play feed (only became visible once `sync_pandascore`
+  started backfilling real finished matches alongside upcoming/live ones).
+- **Design-correction pass** (verified against a real Figma dev-mode export,
+  not just the earlier screenshots):
+  - Team-selection buttons: background `#666C7C`, white border (blue when
+    selected), white text — was rendering as the dark card color, plus long
+    real team names (e.g. "QUINTESSÊNCIA") were overflowing the button
+    instead of staying inside it.
+  - Long team names: `numberOfLines={1}` + `adjustsFontSizeToFit` +
+    `minimumFontScale={0.55}` (multi-line wrapping still let single long
+    words break mid-word on Android, e.g. "QUINTESSÊNCI"/"A" — shrinking to
+    fit one line reads cleaner than a broken word).
+  - Tournament/game name text: `#959595` (`colors.textGray`), was the wrong
+    muted-blue token.
+  - Backspace key: real delete icon (Figma-exported `delete.svg`) instead
+    of a plain "&lt;x" text button.
+  - Vote/keypad accent color: `#FFA800` (`colors.coin`), was `#F5A623`.
+  - Added client-side stake validation (can't submit 0/empty, can't exceed
+    current balance) with an inline red error message, in addition to the
+    existing server-side check — the Vote button disables itself rather
+    than only failing after a round-trip.
