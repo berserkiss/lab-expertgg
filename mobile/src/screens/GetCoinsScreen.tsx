@@ -87,9 +87,9 @@ export default function GetCoinsScreen({ navigation }: any) {
         <View style={styles.panel}>
           <Text style={styles.freeCoins}>Free Coins</Text>
           <View style={styles.illustration}>
-            <SparkRay width={140} height={82} style={styles.sparkA} />
-            <SparkRay width={140} height={82} style={styles.sparkB} />
-            <CoinsGlow width={100} height={100} style={styles.glow} />
+            <SparkRay width={160} height={94} style={styles.sparkA} />
+            <SparkRay width={160} height={94} style={styles.sparkB} />
+            <CoinsGlow width={180} height={180} style={styles.glow} />
             <CoinsIcon width={100} height={100} />
           </View>
         </View>
@@ -144,18 +144,19 @@ const styles = StyleSheet.create({
   glow: { position: 'absolute' },
   sparkA: { position: 'absolute' },
   sparkB: { position: 'absolute', transform: [{ rotate: '90deg' }] },
+  // Matches components/Button.tsx exactly (height/borderRadius/text style) -
+  // this screen needs a leading icon, which the shared Button doesn't
+  // support, otherwise this would just be <Button ... />.
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     backgroundColor: colors.primary,
-    borderRadius: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
+    height: 50,
+    borderRadius: 24,
     alignSelf: 'stretch',
-    minHeight: 48,
   },
   buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: colors.text, fontFamily: fonts.semiBold },
+  buttonText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: typography.body.fontSize },
 });
