@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BalanceBadge from '../components/BalanceBadge';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
@@ -11,6 +12,7 @@ import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
 import { fetchMatches } from '../api/matches';
 import { formatCountdown } from '../utils/countdown';
+import ClockIcon from '../assets/clock.svg';
 
 // Game/date filters are hidden for now (client-side only) - re-add the
 // tabsRow/rangeRow UI once the design comes back for them.
@@ -33,6 +35,7 @@ export default function PlayScreen({ navigation }: any) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>Play</Text>
+        <BalanceBadge />
       </View>
 
       {loading ? (
@@ -68,7 +71,10 @@ export default function PlayScreen({ navigation }: any) {
                 <Text style={styles.vs}>VS</Text>
                 <Text style={[styles.teamName, styles.teamNameRight]}>{item.team_b.name}</Text>
               </View>
-              <Text style={styles.countdown}>{formatCountdown(item.start_time, now)}</Text>
+              <View style={styles.countdownRow}>
+                <ClockIcon width={12} height={12} />
+                <Text style={styles.countdown}>{formatCountdown(item.start_time, now)}</Text>
+              </View>
             </TouchableOpacity>
           )}
         />
@@ -108,5 +114,6 @@ const styles = StyleSheet.create({
   teamName: { color: colors.text, fontSize: typography.bodySmall.fontSize, fontFamily: fonts.semiBold, flex: 1 },
   teamNameRight: { textAlign: 'right' },
   vs: { color: colors.textMuted, marginHorizontal: 8, fontFamily: fonts.regular },
+  countdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   countdown: { color: colors.textMuted, fontSize: typography.small.fontSize, textAlign: 'center', fontFamily: fonts.regular },
 });

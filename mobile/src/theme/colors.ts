@@ -11,8 +11,8 @@ export const colors = {
   text: '#FFFFFF',
   textMuted: '#8A93B8',
   textGray: '#959595',
-  win: '#2ECC71',
-  lose: '#FF5C5C',
+  win: '#12CC46',
+  lose: '#FF383C',
   active: '#F5A623',
   coin: '#F5A623',
 };
