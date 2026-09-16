@@ -20,12 +20,15 @@ import { typography } from '../theme/typography';
 // device, instead of the card being squeezed to hit an exact visible count.
 const ROW_VERTICAL_PADDING = 20;
 const AVATAR_SIZE = 32;
+// Rankings shift as other players place/resolve bets - poll so this stays
+// current without a manual refresh.
+const POLL_MS = 15000;
 const ROW_GAP = 16;
 const ROW_HEIGHT = ROW_VERTICAL_PADDING * 2 + AVATAR_SIZE + ROW_GAP;
 
 export default function LeaderboardScreen() {
   const { user } = useAuth();
-  const { items, error, loading, reload } = useFetchList(fetchLeaderboard);
+  const { items, error, loading, reload } = useFetchList(fetchLeaderboard, POLL_MS);
   const listRef = useRef<FlatList<LeaderboardEntry>>(null);
   const [listHeight, setListHeight] = useState(0);
 

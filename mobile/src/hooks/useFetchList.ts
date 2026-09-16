@@ -9,7 +9,11 @@ import { useFocusEffect } from '@react-navigation/native';
 // can pass a fresh inline function on every render (e.g. `() =>
 // fetchMatches({})`) without that alone re-triggering a fetch - only an
 // actual screen focus does.
-export function useFetchList<T>(fetcher: () => Promise<T[]>) {
+//
+// Pass pollMs to also re-fetch on a timer while the screen stays focused,
+// so match status/bet outcomes/leaderboard positions update on their own -
+// no pull-to-refresh or navigating away and back needed to see fresh data.
+export function useFetchList<T>(fetcher: () => Promise<T[]>, pollMs?: number) {
   const [items, setItems] = useState<T[]>([]);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,13 +33,31 @@ export function useFetchList<T>(fetcher: () => Promise<T[]>) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Same reasoning as reload() above - a background poll tick shouldn't
+  // flash the full-screen loading state on every refetch.
+  const silentReload = useCallback(() => {
+    return fetcherRef
+      .current()
+      .then(data => {
+        setItems(data);
+        setError(false);
+      })
+      .catch(() => {
+        // A poll tick failing silently is fine - the next tick retries,
+        // and pull-to-refresh/focus-reload already surface real errors.
+      });
+  }, []);
+
   // useFocusEffect requires its callback to return void|cleanup, not a
   // Promise (which reload() does, so callers can await it on refresh) -
   // wrap it so the promise itself isn't handed back to the framework.
   useFocusEffect(
     useCallback(() => {
       reload();
-    }, [reload]),
+      if (!pollMs) return;
+      const id = setInterval(silentReload, pollMs);
+      return () => clearInterval(id);
+    }, [reload, silentReload, pollMs]),
   );
 
   return { items, error, loading, reload };

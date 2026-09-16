@@ -12,8 +12,12 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
 
+// A bet sitting as "Active" flips to Win/Lose once its match resolves -
+// poll so that shows up without a manual refresh.
+const POLL_MS = 15000;
+
 export default function HistoryScreen() {
-  const { items, error, loading, reload } = useFetchList(fetchHistory);
+  const { items, error, loading, reload } = useFetchList(fetchHistory, POLL_MS);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
