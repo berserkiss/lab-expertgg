@@ -18,7 +18,16 @@ class MatchListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        qs = Match.objects.select_related("tournament__game", "team_a", "team_b").order_by("start_time")
+        # Finished matches can't be bet on (see votes/serializers.py) and
+        # have no reason to clutter the Play list - History is where a
+        # resolved bet's match shows up. Matters in practice now that real
+        # matches come from PandaScore (sync_pandascore backfills plenty of
+        # already-finished ones alongside upcoming/live).
+        qs = (
+            Match.objects.select_related("tournament__game", "team_a", "team_b")
+            .exclude(status=Match.Status.FINISHED)
+            .order_by("start_time")
+        )
 
         game_slug = self.request.query_params.get("game")
         if game_slug:
