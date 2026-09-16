@@ -1,18 +1,75 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import BalanceBadge from '../components/BalanceBadge';
 import CoinsGlow from '../assets/coins-glow.svg';
 import CoinsIcon from '../assets/coins.svg';
 import FilmIcon from '../assets/film.svg';
+import { useAuth } from '../context/AuthContext';
+import { claimAdReward, fetchAdRewardStatus } from '../api/wallet';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
 
-// Placeholder screen: there is no backend endpoint for this yet - the
-// button below is intentionally inert (see code.md, out of scope for
-// Simplified 2).
+function formatSeconds(total: number) {
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
 export default function GetCoinsScreen({ navigation }: any) {
+  const { refreshUser } = useAuth();
+  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
+  const [reward, setReward] = useState<number | null>(null);
+  const [claiming, setClaiming] = useState(false);
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const status = await fetchAdRewardStatus();
+      setSecondsRemaining(status.available ? 0 : status.seconds_remaining);
+      setReward(status.reward);
+    } catch {
+      // Leave the button in its last known state - not worth a full error
+      // screen for a secondary "free coins" feature.
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadStatus();
+    }, [loadStatus]),
+  );
+
+  // Local per-second countdown so the button re-enables on its own once the
+  // cooldown lapses, without polling the server every second.
+  useEffect(() => {
+    if (!secondsRemaining || secondsRemaining <= 0) return;
+    const id = setInterval(() => {
+      setSecondsRemaining(prev => (prev && prev > 1 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [secondsRemaining]);
+
+  const onGetCoins = async () => {
+    setClaiming(true);
+    try {
+      const result = await claimAdReward();
+      await refreshUser();
+      setSecondsRemaining(null);
+      await loadStatus();
+      Alert.alert('Success', `+${result.reward} coins added to your balance!`);
+    } catch (e: any) {
+      const remaining = e?.response?.data?.seconds_remaining;
+      if (typeof remaining === 'number') setSecondsRemaining(remaining);
+      Alert.alert('Not yet', e?.response?.data?.detail ?? 'Try again in a bit.');
+    } finally {
+      setClaiming(false);
+    }
+  };
+
+  const onCooldown = !!secondsRemaining && secondsRemaining > 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -30,9 +87,20 @@ export default function GetCoinsScreen({ navigation }: any) {
             <CoinsIcon width={100} height={100} />
           </View>
         </View>
-        <TouchableOpacity style={styles.button}>
-          <FilmIcon width={24} height={24} />
-          <Text style={styles.buttonText}>Get coins</Text>
+        <TouchableOpacity
+          style={[styles.button, onCooldown && styles.buttonDisabled]}
+          onPress={onGetCoins}
+          disabled={onCooldown || claiming}>
+          {claiming ? (
+            <ActivityIndicator color={colors.text} />
+          ) : (
+            <>
+              <FilmIcon width={24} height={24} />
+              <Text style={styles.buttonText}>
+                {onCooldown ? `Available in ${formatSeconds(secondsRemaining)}` : `Get coins${reward ? ` (+${reward})` : ''}`}
+              </Text>
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -66,6 +134,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 32,
     alignSelf: 'stretch',
+    minHeight: 48,
   },
+  buttonDisabled: { opacity: 0.5 },
   buttonText: { color: colors.text, fontFamily: fonts.semiBold },
 });

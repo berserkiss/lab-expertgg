@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import WalletIcon from '../assets/wallet.svg';
 import { useAuth } from '../context/AuthContext';
 import { colors } from '../theme/colors';
@@ -13,9 +13,13 @@ import { typography } from '../theme/typography';
 const POLL_MS = 15000;
 
 // Shown in every main-tab screen's header, next to the title - matches the
-// Figma header row on Play/History/Leaderboard/Account/Get coins.
+// Figma header row on Play/History/Leaderboard/Account/Get coins. Tapping it
+// (the wallet icon includes the "+" badge) opens Get Coins, which lives
+// under the Account tab's stack - useNavigation() (rather than a prop) is
+// what lets this work from every tab, not just Account's own screens.
 export default function BalanceBadge() {
   const { user, refreshUser } = useAuth();
+  const navigation = useNavigation<any>();
 
   useFocusEffect(
     useCallback(() => {
@@ -25,10 +29,12 @@ export default function BalanceBadge() {
   );
 
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      style={styles.container}
+      onPress={() => navigation.navigate('Account', { screen: 'GetCoins' })}>
       <Text style={styles.balance}>{user?.balance ?? 0} gg</Text>
       <WalletIcon width={28} height={27} />
-    </View>
+    </TouchableOpacity>
   );
 }
 
