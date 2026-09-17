@@ -39,16 +39,9 @@ export default function MainTabs() {
           paddingHorizontal: 4,
           paddingBottom: 10,
         },
-        // "Leaderboard" is the longest label - fixing every label to a small
-        // enough size to never truncate it makes the other three look
-        // undersized next to the design. Instead render the full-size label
-        // and let it shrink on its own, only as much as it needs to, only on
-        // the tab(s) that don't have room at full size.
         tabBarLabel: ({ color, children }) => (
           <Text
             numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.75}
             style={{ fontFamily: fonts.medium, fontSize: typography.small.fontSize, color }}>
             {children}
           </Text>
@@ -60,7 +53,7 @@ export default function MainTabs() {
       })}>
       <Tab.Screen name="Play" component={PlayStack} />
       <Tab.Screen name="History" component={HistoryScreen} />
-      <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
+      <Tab.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaders' }} />
       <Tab.Screen name="Account" component={AccountStack} />
     </Tab.Navigator>
   );

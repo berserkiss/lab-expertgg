@@ -280,16 +280,16 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  cardHeaderTextWrap: { flex: 1 },
+  cardHeaderRow: { justifyContent: 'center', marginBottom: 8 },
+  cardHeaderTextWrap: { width: '100%' },
   tournament: { color: colors.textGray, fontSize: typography.small.fontSize, fontFamily: fonts.regular, textAlign: 'center' },
   game: { color: colors.textGray, fontSize: typography.tiny.fontSize, fontFamily: fonts.regular, textAlign: 'center' },
+  // Taken out of the header's flow so the tournament name stays centred on the
+  // card, not on whatever width is left beside the badge.
   bookBadge: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
     borderWidth: 1,
     borderColor: colors.primary,
     borderRadius: 12,
@@ -308,9 +308,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.teamButtonBorder,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
-    minHeight: 44,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    minHeight: 56,
   },
   teamButtonActive: { borderColor: colors.primary },
   teamIcon: { width: 18, height: 18, borderRadius: 9 },
@@ -398,6 +398,9 @@ const styles = StyleSheet.create({
     fontSize: typography.tiny.fontSize,
     textAlign: 'center',
   },
+  // Sits on the card's bottom edge (the negative margin eats the card's own
+  // bottom padding), so the pill - same colour as the screen behind the card -
+  // reads as notched into it rather than floating above the edge.
   countdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -409,6 +412,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     marginTop: 8,
+    marginBottom: -16,
   },
   countdown: { color: colors.textMuted, fontSize: typography.small.fontSize, textAlign: 'center', fontFamily: fonts.regular },
 });

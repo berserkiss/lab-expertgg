@@ -106,7 +106,7 @@ export default function GetCoinsScreen({ navigation }: any) {
               <>
                 <FilmIcon width={24} height={24} />
                 <Text style={styles.buttonText}>
-                  {onCooldown ? `Available in ${formatSeconds(secondsRemaining)}` : `Get coins${reward ? ` (+${reward})` : ''}`}
+                  {onCooldown ? `Available in ${formatSeconds(secondsRemaining)}` : 'Get coins'}
                 </Text>
               </>
             )}
@@ -148,11 +148,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.navBackground,
     borderRadius: 16,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
     marginBottom: 24,
   },
-  freeCoins: { color: colors.text, fontSize: typography.h3.fontSize, fontFamily: fonts.bold, marginBottom: 24 },
+  freeCoins: { color: colors.text, fontSize: typography.h3.fontSize, fontFamily: fonts.bold, marginBottom: 16 },
   illustration: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
   glow: { position: 'absolute' },
   sparkA: { position: 'absolute' },
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 24,
     alignSelf: 'stretch',
-    marginTop: 24,
+    marginTop: 16,
   },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: typography.body.fontSize },

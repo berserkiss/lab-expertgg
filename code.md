@@ -269,8 +269,23 @@ Corrections raised after comparing the running app against the Figma
   `adjustsFontSizeToFit` approach from pass 1: Figma shows
   "QUINTESSÊN…" with an ellipsis at full size, so it is
   `numberOfLines={1}` + `ellipsizeMode="tail"` only.
-- **Team buttons**: dark `#090C15` fill with a `#666C7C` border, blue
-  border when selected; the name is regular weight, not semibold.
+- **Team buttons are outline only** — no fill at all, `#666C7C` border
+  (blue when selected), name in regular weight at 12pt inside a taller
+  box (56pt min height) than the text alone needs.
+- **The countdown pill hangs off the bottom of the card**, not floating
+  above it: it is the same colour as the screen behind the card and its
+  bottom edge meets the card's, so it reads as notched in.
+- **The tournament name stays centred on the card even with a "Book"
+  badge** — the badge is positioned absolutely rather than sharing the
+  header row, which was pushing the name off-centre.
+- **The balance bag icon matches the balance text's height** (21×20,
+  was 28×27 and towering over it).
+- **The Get coins button reads just "Get coins"** — no reward amount in
+  the label — and the panel around it is tighter than a default
+  spacing pass gives: 24pt panel padding, 16pt between title, coins and
+  button.
+- **The leaderboard tab is labelled "Leaders"**, which also removes the
+  need for the shrink-to-fit label hack the longer word required.
 - **Bet keypad is two rows of six outlined keys.** 1–6 / 7, 8, 9, 0 and
   a double-width 00, each key its own bordered box, with the orange Vote
   button filling the column to their right across both rows — not a

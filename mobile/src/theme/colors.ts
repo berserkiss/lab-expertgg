@@ -16,6 +16,6 @@ export const colors = {
   lose: '#FF383C',
   active: '#F5A623',
   coin: '#FFA800',
-  teamButtonBg: '#090C15',
+  teamButtonBg: 'transparent',
   teamButtonBorder: '#666C7C',
 };
