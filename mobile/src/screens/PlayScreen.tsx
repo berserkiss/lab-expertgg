@@ -315,7 +315,7 @@ const styles = StyleSheet.create({
   teamButtonActive: { borderColor: colors.primary },
   teamIcon: { width: 18, height: 18, borderRadius: 9 },
   teamName: { color: colors.text, fontSize: typography.small.fontSize, fontFamily: fonts.regular, flexShrink: 1, textAlign: 'center' },
-  vs: { color: colors.textMuted, fontFamily: fonts.regular },
+  vs: { color: colors.text, fontFamily: fonts.medium, fontSize: typography.h4.fontSize },
   divider: { height: 1, backgroundColor: colors.border, marginBottom: 12 },
   winsText: {
     color: colors.text,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   // Fills the group's height so it reads as an inset input field, the way the
   // frame draws it - a floating rounded box leaves dark gaps above and below.
   stakeField: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.inputField,
     justifyContent: 'center',
     paddingHorizontal: 12,
     minWidth: 76,
@@ -393,9 +393,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   voteButtonDisabled: { opacity: 0.4 },
-  voteTitle: { color: colors.background, fontFamily: fonts.bold, fontSize: typography.bodySmall.fontSize },
+  voteTitle: { color: colors.text, fontFamily: fonts.bold, fontSize: typography.bodySmall.fontSize },
   voteSubtitle: {
-    color: colors.background,
+    color: colors.text,
     fontFamily: fonts.semiBold,
     fontSize: typography.tiny.fontSize,
     textAlign: 'center',
@@ -410,9 +410,12 @@ const styles = StyleSheet.create({
     gap: 4,
     alignSelf: 'center',
     backgroundColor: colors.background,
-    borderRadius: 12,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    // Fixed width so a short label ("Live") gets the same plate as a long
+    // one ("2h 5min") instead of shrinking to fit its text.
+    minWidth: 100,
     marginTop: 8,
     marginBottom: -16,
   },

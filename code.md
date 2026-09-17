@@ -306,3 +306,11 @@ Corrections raised after comparing the running app against the Figma
   auto-dismiss); `Alert.alert` is only kept for error paths.
 - **The Get coins button lives inside the Free Coins panel**, sized
   exactly like the shared `Button` component (height 50, radius 24).
+- **Vote button text is white**, not dark, on the orange fill.
+- **The stake field is `#EBEBE9`**, an off-white, not pure white.
+- **"VS" is white and larger** (18pt medium) than the team names — it
+  was set in the muted blue-grey used for captions and read as
+  secondary to the names it separates.
+- **The countdown plate has a fixed 100pt width and an 8pt radius** —
+  it does not shrink to hug a short label like "Live", and it is a
+  rounded plate rather than a fully-rounded pill.

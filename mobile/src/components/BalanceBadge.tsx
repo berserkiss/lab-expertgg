@@ -33,7 +33,7 @@ export default function BalanceBadge() {
       style={styles.container}
       onPress={() => navigation.navigate('Account', { screen: 'GetCoins' })}>
       <Text style={styles.balance}>{user?.balance ?? 0} gg</Text>
-      <WalletIcon width={21} height={20} />
+      <WalletIcon width={25} height={24} />
     </TouchableOpacity>
   );
 }
