@@ -294,6 +294,10 @@ Corrections raised after comparing the running app against the Figma
 - **Stake stepper is one bordered group** — minus, a white input-style
   field holding the amount in dark text, plus — with the backspace and
   Cancel buttons as separate equal-height outlined buttons beside it.
+  The white field fills the group's full height; inset like a real
+  input rather than floating inside it with dark gaps above and below.
+- **The tournament name outranks the game name** (14pt over 11pt) —
+  at the same size the header reads as two equal lines of grey.
 - **A divider separates the teams row from the bet controls** when a
   card is expanded.
 - **Confirmations are in-app modals, not OS alerts or banners.** Both

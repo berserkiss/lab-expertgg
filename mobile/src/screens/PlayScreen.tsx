@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   },
   cardHeaderRow: { justifyContent: 'center', marginBottom: 8 },
   cardHeaderTextWrap: { width: '100%' },
-  tournament: { color: colors.textGray, fontSize: typography.small.fontSize, fontFamily: fonts.regular, textAlign: 'center' },
+  tournament: { color: colors.textGray, fontSize: typography.label.fontSize, fontFamily: fonts.regular, textAlign: 'center' },
   game: { color: colors.textGray, fontSize: typography.tiny.fontSize, fontFamily: fonts.regular, textAlign: 'center' },
   // Taken out of the header's flow so the tournament name stays centred on the
   // card, not on whatever width is left beside the badge.
@@ -327,20 +327,22 @@ const styles = StyleSheet.create({
   stakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 },
   stepperGroup: {
     flexDirection: 'row',
-    alignItems: 'center',
-    height: 36,
+    alignItems: 'stretch',
+    height: 40,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
+    overflow: 'hidden',
   },
-  stepperButton: { paddingHorizontal: 10, height: '100%', justifyContent: 'center' },
-  stepper: { color: colors.text, fontSize: typography.h4.fontSize, fontFamily: fonts.regular },
+  stepperButton: { paddingHorizontal: 12, justifyContent: 'center' },
+  stepper: { color: colors.text, fontSize: typography.h3.fontSize, fontFamily: fonts.medium },
+  // Fills the group's height so it reads as an inset input field, the way the
+  // frame draws it - a floating rounded box leaves dark gaps above and below.
   stakeField: {
     backgroundColor: colors.text,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    minWidth: 60,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    minWidth: 76,
   },
   stakeValue: {
     color: colors.background,
@@ -349,7 +351,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   smallButton: {
-    height: 36,
+    height: 40,
     paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: colors.border,
