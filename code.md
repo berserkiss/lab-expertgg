@@ -314,3 +314,17 @@ Corrections raised after comparing the running app against the Figma
 - **The countdown plate has a fixed 100pt width and an 8pt radius** —
   it does not shrink to hug a short label like "Live", and it is a
   rounded plate rather than a fully-rounded pill.
+
+### History rows (DK.History frame)
+
+A history row is not a text list — it mirrors the Play card:
+
+- Outlined status badge (Win green / Lose red / Active orange) on the left of
+  the top row, `Game: Tournament` muted on the right, truncating rather than
+  colliding with the badge.
+- The two teams as the same outlined boxes the Play screen uses, with the
+  team this bet was placed on carrying the blue border.
+- Bottom row: the placement time as `17 Jan 14:23` on the left, and the
+  result as an outlined badge in the status colour on the right. A settled
+  bet shows a sign (`+ 100 gg` / `- 70 gg`); one still running shows the
+  stake at risk with no sign (`20 gg`).
