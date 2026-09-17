@@ -254,13 +254,13 @@ feedback, not just in chat):
 Corrections raised after comparing the running app against the Figma
 "DK. Play"/"DK. Get coins" frames pane-by-pane:
 
-- **Card borders are structural, not decorative.** Every match card and
-  every history row carries a visible outer border. The badge colour is
-  what the border shows: a match you already have a bet on ("Book"
-  badge) gets the primary blue border, a history row gets its status
-  colour (green won / red lost / orange active). Non-bet match cards
-  keep a neutral `rgba(255,255,255,0.14)` outline (`colors.border`) —
-  the previous `#22305C` was too close to the card fill to be visible.
+- **Match cards and history rows have no outer border at all** — they
+  are separated from the screen by their fill alone. What is outlined is
+  the *badge*: "Book" is a blue-outlined pill with blue-on-dark text,
+  not a solid blue chip, and a history row's status badge is outlined in
+  its status colour (green won / red lost / orange active) with matching
+  text. `colors.border` (`rgba(255,255,255,0.14)`) is for inner
+  outlines only — keypad keys, the stepper group, the divider.
 - **Card fill is `#191B28`** on Play, the same token already used by
   history rows, the leaderboard rows and the Get Coins panel.
 - **The countdown is a pill, not loose text** — its own `#090C15`
@@ -269,15 +269,18 @@ Corrections raised after comparing the running app against the Figma
   `adjustsFontSizeToFit` approach from pass 1: Figma shows
   "QUINTESSÊN…" with an ellipsis at full size, so it is
   `numberOfLines={1}` + `ellipsizeMode="tail"` only.
-- **Team buttons are outlined, not filled.** Transparent fill with a
-  white border (blue when selected); the name is regular weight, not
-  semibold.
-- **Bet keypad is two rows of six.** 1–6 / 7, 8, 9, 0, 00, with the
-  orange Vote button filling the column to their right across both
-  rows — not a 4-wide grid with Vote as a trailing cell.
-- **Stake stepper is one bordered group** (− value +), with the
-  backspace and Cancel buttons as separate equal-height outlined
-  buttons beside it.
+- **Team buttons**: dark `#090C15` fill with a `#666C7C` border, blue
+  border when selected; the name is regular weight, not semibold.
+- **Bet keypad is two rows of six outlined keys.** 1–6 / 7, 8, 9, 0 and
+  a double-width 00, each key its own bordered box, with the orange Vote
+  button filling the column to their right across both rows — not a
+  4-wide grid of bare digits with Vote as a trailing cell. The Vote
+  label is two sizes: "Vote" bold over a smaller "win 2gg + bonus".
+- **Stake stepper is one bordered group** — minus, a white input-style
+  field holding the amount in dark text, plus — with the backspace and
+  Cancel buttons as separate equal-height outlined buttons beside it.
+- **A divider separates the teams row from the bet controls** when a
+  card is expanded.
 - **Confirmations are in-app modals, not OS alerts or banners.** Both
   "Bet placed!" and the Get Coins "Success" use a shared
   `ConfirmationModal` (dark card, accent-coloured check badge,

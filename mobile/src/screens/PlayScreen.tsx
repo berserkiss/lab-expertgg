@@ -26,7 +26,12 @@ import ClockIcon from '../assets/clock.svg';
 import SwordsIcon from '../assets/swords.svg';
 import DeleteIcon from '../assets/delete.svg';
 
-const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '00'];
+// Two rows of six, with "00" taking the width of two keys - matches the
+// Figma pad, which the Vote button sits beside rather than inside.
+const KEY_ROWS = [
+  ['1', '2', '3', '4', '5', '6'],
+  ['7', '8', '9', '0', '00'],
+];
 const WIN_BONUS = 2;
 // How often the list (match status/has_active_bet) and balance refresh
 // on their own while this screen is focused, no pull-to-refresh needed -
@@ -146,7 +151,7 @@ export default function PlayScreen({ navigation }: any) {
           renderItem={({ item }) => {
             const isExpanded = item.id === expandedId;
             return (
-              <View style={[styles.card, item.has_active_bet && styles.cardActiveBet]}>
+              <View style={styles.card}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardHeaderTextWrap}>
                     <Text style={styles.tournament}>{item.tournament.name}</Text>
@@ -189,6 +194,7 @@ export default function PlayScreen({ navigation }: any) {
 
                 {isExpanded ? (
                   <>
+                    <View style={styles.divider} />
                     {selectedTeam && <Text style={styles.winsText}>{selectedTeam.name} wins</Text>}
 
                     <View style={styles.stakeRow}>
@@ -198,7 +204,9 @@ export default function PlayScreen({ navigation }: any) {
                           onPress={() => setStake(s => String(Math.max(0, parseInt(s || '0', 10) - 1)))}>
                           <Text style={styles.stepper}>−</Text>
                         </TouchableOpacity>
-                        <Text style={styles.stakeValue}>{stake}</Text>
+                        <View style={styles.stakeField}>
+                          <Text style={styles.stakeValue}>{stake}</Text>
+                        </View>
                         <TouchableOpacity
                           style={styles.stepperButton}
                           onPress={() => setStake(s => String(parseInt(s || '0', 10) + 1))}>
@@ -219,17 +227,25 @@ export default function PlayScreen({ navigation }: any) {
 
                     <View style={styles.keypadRow}>
                       <View style={styles.keypad}>
-                        {KEYS.map(key => (
-                          <TouchableOpacity key={key} style={styles.key} onPress={() => handleKeyPress(key)}>
-                            <Text style={styles.keyText}>{key}</Text>
-                          </TouchableOpacity>
+                        {KEY_ROWS.map((row, rowIndex) => (
+                          <View key={rowIndex} style={styles.keyRow}>
+                            {row.map(key => (
+                              <TouchableOpacity
+                                key={key}
+                                style={[styles.key, key === '00' && styles.keyWide]}
+                                onPress={() => handleKeyPress(key)}>
+                                <Text style={styles.keyText}>{key}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
                         ))}
                       </View>
                       <TouchableOpacity
                         style={[styles.voteButton, !!validationError && styles.voteButtonDisabled]}
                         onPress={() => handleVote(item)}
                         disabled={submitting || !selectedTeam || !!validationError}>
-                        <Text style={styles.voteButtonText}>Vote{'\n'}win {WIN_BONUS}gg + bonus</Text>
+                        <Text style={styles.voteTitle}>Vote</Text>
+                        <Text style={styles.voteSubtitle}>win {WIN_BONUS}gg + bonus</Text>
                       </TouchableOpacity>
                     </View>
                   </>
@@ -261,12 +277,9 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.navBackground,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: 16,
     marginBottom: 12,
   },
-  cardActiveBet: { borderColor: colors.primary },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -276,8 +289,14 @@ const styles = StyleSheet.create({
   cardHeaderTextWrap: { flex: 1 },
   tournament: { color: colors.textGray, fontSize: typography.small.fontSize, fontFamily: fonts.regular, textAlign: 'center' },
   game: { color: colors.textGray, fontSize: typography.tiny.fontSize, fontFamily: fonts.regular, textAlign: 'center' },
-  bookBadge: { backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  bookBadgeText: { color: colors.text, fontSize: typography.tiny.fontSize, fontFamily: fonts.semiBold },
+  bookBadge: {
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  bookBadgeText: { color: colors.text, fontSize: typography.small.fontSize, fontFamily: fonts.semiBold },
   teamsRow: { flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between', marginBottom: 8, gap: 8 },
   teamButton: {
     flex: 1,
@@ -297,6 +316,7 @@ const styles = StyleSheet.create({
   teamIcon: { width: 18, height: 18, borderRadius: 9 },
   teamName: { color: colors.text, fontSize: typography.small.fontSize, fontFamily: fonts.regular, flexShrink: 1, textAlign: 'center' },
   vs: { color: colors.textMuted, fontFamily: fonts.regular },
+  divider: { height: 1, backgroundColor: colors.border, marginBottom: 12 },
   winsText: {
     color: colors.text,
     fontSize: typography.small.fontSize,
@@ -315,11 +335,17 @@ const styles = StyleSheet.create({
   },
   stepperButton: { paddingHorizontal: 10, height: '100%', justifyContent: 'center' },
   stepper: { color: colors.text, fontSize: typography.h4.fontSize, fontFamily: fonts.regular },
+  stakeField: {
+    backgroundColor: colors.text,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 60,
+  },
   stakeValue: {
-    color: colors.text,
+    color: colors.background,
     fontSize: typography.body.fontSize,
     fontFamily: fonts.semiBold,
-    minWidth: 44,
     textAlign: 'center',
   },
   smallButton: {
@@ -342,9 +368,19 @@ const styles = StyleSheet.create({
   // Figma lays the pad out as two rows of six with the Vote button filling
   // the column to their right, not as a 4-wide grid with Vote as the last cell.
   keypadRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginBottom: 8 },
-  keypad: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
-  key: { width: '16.66%', paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
-  keyText: { color: colors.text, fontSize: typography.body.fontSize, fontFamily: fonts.regular },
+  keypad: { flex: 1, gap: 6 },
+  keyRow: { flexDirection: 'row', gap: 6 },
+  key: {
+    flex: 1,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  keyWide: { flex: 2 },
+  keyText: { color: colors.text, fontSize: typography.bodySmall.fontSize, fontFamily: fonts.regular },
   voteButton: {
     width: 88,
     paddingHorizontal: 6,
@@ -355,7 +391,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   voteButtonDisabled: { opacity: 0.4 },
-  voteButtonText: { color: colors.background, fontFamily: fonts.bold, fontSize: typography.tiny.fontSize, textAlign: 'center' },
+  voteTitle: { color: colors.background, fontFamily: fonts.bold, fontSize: typography.bodySmall.fontSize },
+  voteSubtitle: {
+    color: colors.background,
+    fontFamily: fonts.semiBold,
+    fontSize: typography.tiny.fontSize,
+    textAlign: 'center',
+  },
   countdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
