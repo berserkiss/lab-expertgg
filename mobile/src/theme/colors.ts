@@ -5,6 +5,7 @@ export const colors = {
   card: '#131F45',
   cardBorder: '#22305C',
   navBackground: '#191B28',
+  border: 'rgba(255,255,255,0.14)',
   navIconActive: '#FFFFFF',
   navIconInactive: '#666C7C',
   primary: '#0166FE',
@@ -15,6 +16,6 @@ export const colors = {
   lose: '#FF383C',
   active: '#F5A623',
   coin: '#FFA800',
-  teamButtonBg: '#666C7C',
+  teamButtonBg: 'transparent',
   teamButtonBorder: '#FFFFFF',
 };

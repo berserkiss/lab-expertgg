@@ -3,6 +3,7 @@ import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import BalanceBadge from '../components/BalanceBadge';
+import ConfirmationModal from '../components/ConfirmationModal';
 import BackArrowIcon from '../assets/back-arrow.svg';
 import CoinsGlow from '../assets/coins-glow.svg';
 import CoinsIcon from '../assets/coins.svg';
@@ -13,6 +14,8 @@ import { claimAdReward, fetchAdRewardStatus } from '../api/wallet';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
+
+const SUCCESS_MODAL_MS = 2500;
 
 function formatSeconds(total: number) {
   const m = Math.floor(total / 60);
@@ -25,6 +28,7 @@ export default function GetCoinsScreen({ navigation }: any) {
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
   const [reward, setReward] = useState<number | null>(null);
   const [claiming, setClaiming] = useState(false);
+  const [claimedReward, setClaimedReward] = useState<number | null>(null);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -60,7 +64,7 @@ export default function GetCoinsScreen({ navigation }: any) {
       await refreshUser();
       setSecondsRemaining(null);
       await loadStatus();
-      Alert.alert('Success', `+${result.reward} coins added to your balance!`);
+      setClaimedReward(result.reward);
     } catch (e: any) {
       const remaining = e?.response?.data?.seconds_remaining;
       if (typeof remaining === 'number') setSecondsRemaining(remaining);
@@ -92,23 +96,31 @@ export default function GetCoinsScreen({ navigation }: any) {
             <CoinsGlow width={180} height={180} style={styles.glow} />
             <CoinsIcon width={100} height={100} />
           </View>
+          <TouchableOpacity
+            style={[styles.button, onCooldown && styles.buttonDisabled]}
+            onPress={onGetCoins}
+            disabled={onCooldown || claiming}>
+            {claiming ? (
+              <ActivityIndicator color={colors.text} />
+            ) : (
+              <>
+                <FilmIcon width={24} height={24} />
+                <Text style={styles.buttonText}>
+                  {onCooldown ? `Available in ${formatSeconds(secondsRemaining)}` : `Get coins${reward ? ` (+${reward})` : ''}`}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={[styles.button, onCooldown && styles.buttonDisabled]}
-          onPress={onGetCoins}
-          disabled={onCooldown || claiming}>
-          {claiming ? (
-            <ActivityIndicator color={colors.text} />
-          ) : (
-            <>
-              <FilmIcon width={24} height={24} />
-              <Text style={styles.buttonText}>
-                {onCooldown ? `Available in ${formatSeconds(secondsRemaining)}` : `Get coins${reward ? ` (+${reward})` : ''}`}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
       </View>
+      <ConfirmationModal
+        visible={claimedReward !== null}
+        title="Success"
+        message={claimedReward !== null ? `+${claimedReward} coins added to your balance!` : ''}
+        onClose={() => setClaimedReward(null)}
+        autoCloseMs={SUCCESS_MODAL_MS}
+        accentColor={colors.coin}
+      />
     </SafeAreaView>
   );
 }
@@ -137,6 +149,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navBackground,
     borderRadius: 16,
     paddingVertical: 32,
+    paddingHorizontal: 24,
     marginBottom: 24,
   },
   freeCoins: { color: colors.text, fontSize: typography.h3.fontSize, fontFamily: fonts.bold, marginBottom: 24 },
@@ -156,6 +169,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 24,
     alignSelf: 'stretch',
+    marginTop: 24,
   },
   buttonDisabled: { opacity: 0.5 },
   buttonText: { color: colors.text, fontFamily: fonts.semiBold, fontSize: typography.body.fontSize },

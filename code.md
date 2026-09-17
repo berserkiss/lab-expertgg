@@ -248,3 +248,39 @@ feedback, not just in chat):
     current balance) with an inline red error message, in addition to the
     existing server-side check — the Vote button disables itself rather
     than only failing after a round-trip.
+
+### Design-correction pass 2 (side-by-side against the Figma frames)
+
+Corrections raised after comparing the running app against the Figma
+"DK. Play"/"DK. Get coins" frames pane-by-pane:
+
+- **Card borders are structural, not decorative.** Every match card and
+  every history row carries a visible outer border. The badge colour is
+  what the border shows: a match you already have a bet on ("Book"
+  badge) gets the primary blue border, a history row gets its status
+  colour (green won / red lost / orange active). Non-bet match cards
+  keep a neutral `rgba(255,255,255,0.14)` outline (`colors.border`) —
+  the previous `#22305C` was too close to the card fill to be visible.
+- **Card fill is `#191B28`** on Play, the same token already used by
+  history rows, the leaderboard rows and the Get Coins panel.
+- **The countdown is a pill, not loose text** — its own `#090C15`
+  rounded background, centred under the teams.
+- **Long team names truncate, they do not shrink.** Reverted the
+  `adjustsFontSizeToFit` approach from pass 1: Figma shows
+  "QUINTESSÊN…" with an ellipsis at full size, so it is
+  `numberOfLines={1}` + `ellipsizeMode="tail"` only.
+- **Team buttons are outlined, not filled.** Transparent fill with a
+  white border (blue when selected); the name is regular weight, not
+  semibold.
+- **Bet keypad is two rows of six.** 1–6 / 7, 8, 9, 0, 00, with the
+  orange Vote button filling the column to their right across both
+  rows — not a 4-wide grid with Vote as a trailing cell.
+- **Stake stepper is one bordered group** (− value +), with the
+  backspace and Cancel buttons as separate equal-height outlined
+  buttons beside it.
+- **Confirmations are in-app modals, not OS alerts or banners.** Both
+  "Bet placed!" and the Get Coins "Success" use a shared
+  `ConfirmationModal` (dark card, accent-coloured check badge,
+  auto-dismiss); `Alert.alert` is only kept for error paths.
+- **The Get coins button lives inside the Free Coins panel**, sized
+  exactly like the shared `Button` component (height 50, radius 24).

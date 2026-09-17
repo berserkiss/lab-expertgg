@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BalanceBadge from '../components/BalanceBadge';
+import ConfirmationModal from '../components/ConfirmationModal';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
@@ -25,7 +26,7 @@ import ClockIcon from '../assets/clock.svg';
 import SwordsIcon from '../assets/swords.svg';
 import DeleteIcon from '../assets/delete.svg';
 
-const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '00', '0'];
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '00'];
 const WIN_BONUS = 2;
 // How often the list (match status/has_active_bet) and balance refresh
 // on their own while this screen is focused, no pull-to-refresh needed -
@@ -50,12 +51,6 @@ export default function PlayScreen({ navigation }: any) {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ team: string; stake: number } | null>(null);
-
-  useEffect(() => {
-    if (!confirmation) return;
-    const id = setTimeout(() => setConfirmation(null), CONFIRMATION_MS);
-    return () => clearTimeout(id);
-  }, [confirmation]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -126,13 +121,13 @@ export default function PlayScreen({ navigation }: any) {
         <BalanceBadge />
       </View>
 
-      {confirmation && (
-        <View style={styles.confirmationBanner}>
-          <Text style={styles.confirmationText}>
-            Bet placed! {confirmation.stake} gg on {confirmation.team}
-          </Text>
-        </View>
-      )}
+      <ConfirmationModal
+        visible={!!confirmation}
+        title="Bet placed!"
+        message={confirmation ? `${confirmation.stake} gg on ${confirmation.team}` : ''}
+        onClose={() => setConfirmation(null)}
+        autoCloseMs={CONFIRMATION_MS}
+      />
 
       {loading ? (
         <LoadingState />
@@ -151,7 +146,7 @@ export default function PlayScreen({ navigation }: any) {
           renderItem={({ item }) => {
             const isExpanded = item.id === expandedId;
             return (
-              <View style={styles.card}>
+              <View style={[styles.card, item.has_active_bet && styles.cardActiveBet]}>
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardHeaderTextWrap}>
                     <Text style={styles.tournament}>{item.tournament.name}</Text>
@@ -173,12 +168,7 @@ export default function PlayScreen({ navigation }: any) {
                       isExpanded && selectedTeam?.id === item.team_a.id && styles.teamButtonActive,
                     ]}
                     onPress={() => expand(item, item.team_a)}>
-                    <Text
-                      style={styles.teamName}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.55}>
+                    <Text style={styles.teamName} numberOfLines={1} ellipsizeMode="tail">
                       {item.team_a.name}
                     </Text>
                     {renderTeamIcon(item.team_a)}
@@ -191,12 +181,7 @@ export default function PlayScreen({ navigation }: any) {
                     ]}
                     onPress={() => expand(item, item.team_b)}>
                     {renderTeamIcon(item.team_b)}
-                    <Text
-                      style={styles.teamName}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.55}>
+                    <Text style={styles.teamName} numberOfLines={1} ellipsizeMode="tail">
                       {item.team_b.name}
                     </Text>
                   </TouchableOpacity>
@@ -207,14 +192,19 @@ export default function PlayScreen({ navigation }: any) {
                     {selectedTeam && <Text style={styles.winsText}>{selectedTeam.name} wins</Text>}
 
                     <View style={styles.stakeRow}>
-                      <TouchableOpacity
-                        onPress={() => setStake(s => String(Math.max(0, parseInt(s || '0', 10) - 1)))}>
-                        <Text style={styles.stepper}>-</Text>
-                      </TouchableOpacity>
-                      <Text style={styles.stakeValue}>{stake}</Text>
-                      <TouchableOpacity onPress={() => setStake(s => String(parseInt(s || '0', 10) + 1))}>
-                        <Text style={styles.stepper}>+</Text>
-                      </TouchableOpacity>
+                      <View style={styles.stepperGroup}>
+                        <TouchableOpacity
+                          style={styles.stepperButton}
+                          onPress={() => setStake(s => String(Math.max(0, parseInt(s || '0', 10) - 1)))}>
+                          <Text style={styles.stepper}>−</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.stakeValue}>{stake}</Text>
+                        <TouchableOpacity
+                          style={styles.stepperButton}
+                          onPress={() => setStake(s => String(parseInt(s || '0', 10) + 1))}>
+                          <Text style={styles.stepper}>+</Text>
+                        </TouchableOpacity>
+                      </View>
                       <TouchableOpacity onPress={handleBackspace} style={styles.smallButton}>
                         <DeleteIcon width={20} height={20} />
                       </TouchableOpacity>
@@ -227,12 +217,14 @@ export default function PlayScreen({ navigation }: any) {
                       <Text style={styles.validationText}>{submitError ?? validationError}</Text>
                     )}
 
-                    <View style={styles.keypad}>
-                      {KEYS.map(key => (
-                        <TouchableOpacity key={key} style={styles.key} onPress={() => handleKeyPress(key)}>
-                          <Text style={styles.keyText}>{key}</Text>
-                        </TouchableOpacity>
-                      ))}
+                    <View style={styles.keypadRow}>
+                      <View style={styles.keypad}>
+                        {KEYS.map(key => (
+                          <TouchableOpacity key={key} style={styles.key} onPress={() => handleKeyPress(key)}>
+                            <Text style={styles.keyText}>{key}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
                       <TouchableOpacity
                         style={[styles.voteButton, !!validationError && styles.voteButtonDisabled]}
                         onPress={() => handleVote(item)}
@@ -265,24 +257,16 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: { color: colors.text, ...typography.h1, fontFamily: fonts.bold },
-  confirmationBanner: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: colors.win,
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  confirmationText: { color: colors.background, fontFamily: fonts.semiBold, fontSize: typography.small.fontSize, textAlign: 'center' },
   list: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24 },
   card: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.navBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
+    borderColor: colors.border,
     padding: 16,
     marginBottom: 12,
   },
+  cardActiveBet: { borderColor: colors.primary },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -311,28 +295,43 @@ const styles = StyleSheet.create({
   },
   teamButtonActive: { borderColor: colors.primary },
   teamIcon: { width: 18, height: 18, borderRadius: 9 },
-  teamName: { color: colors.text, fontSize: typography.small.fontSize, fontFamily: fonts.semiBold, flexShrink: 1, textAlign: 'center' },
+  teamName: { color: colors.text, fontSize: typography.small.fontSize, fontFamily: fonts.regular, flexShrink: 1, textAlign: 'center' },
   vs: { color: colors.textMuted, fontFamily: fonts.regular },
-  winsText: { color: colors.text, textAlign: 'center', marginBottom: 12, fontFamily: fonts.regular },
-  stakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  stepper: { color: colors.text, fontSize: typography.h2.fontSize, paddingHorizontal: 16, fontFamily: fonts.regular },
+  winsText: {
+    color: colors.text,
+    fontSize: typography.small.fontSize,
+    textAlign: 'center',
+    marginBottom: 12,
+    fontFamily: fonts.regular,
+  },
+  stakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 },
+  stepperGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 36,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+  },
+  stepperButton: { paddingHorizontal: 10, height: '100%', justifyContent: 'center' },
+  stepper: { color: colors.text, fontSize: typography.h4.fontSize, fontFamily: fonts.regular },
   stakeValue: {
     color: colors.text,
-    fontSize: typography.h3.fontSize,
-    fontFamily: fonts.bold,
-    minWidth: 60,
+    fontSize: typography.body.fontSize,
+    fontFamily: fonts.semiBold,
+    minWidth: 44,
     textAlign: 'center',
   },
   smallButton: {
-    marginLeft: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: colors.background,
+    height: 36,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  smallButtonText: { color: colors.text, fontFamily: fonts.regular },
+  smallButtonText: { color: colors.text, fontFamily: fonts.regular, fontSize: typography.bodySmall.fontSize },
   validationText: {
     color: colors.lose,
     fontSize: typography.small.fontSize,
@@ -340,11 +339,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
   },
-  keypad: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 8 },
-  key: { width: '25%', paddingVertical: 16, alignItems: 'center' },
-  keyText: { color: colors.text, fontSize: typography.h4.fontSize, fontFamily: fonts.regular },
+  // Figma lays the pad out as two rows of six with the Vote button filling
+  // the column to their right, not as a 4-wide grid with Vote as the last cell.
+  keypadRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginBottom: 8 },
+  keypad: { flex: 1, flexDirection: 'row', flexWrap: 'wrap' },
+  key: { width: '16.66%', paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  keyText: { color: colors.text, fontSize: typography.body.fontSize, fontFamily: fonts.regular },
   voteButton: {
-    width: '25%',
+    width: 88,
+    paddingHorizontal: 6,
+    paddingVertical: 8,
     backgroundColor: colors.coin,
     alignItems: 'center',
     justifyContent: 'center',
@@ -352,6 +356,17 @@ const styles = StyleSheet.create({
   },
   voteButtonDisabled: { opacity: 0.4 },
   voteButtonText: { color: colors.background, fontFamily: fonts.bold, fontSize: typography.tiny.fontSize, textAlign: 'center' },
-  countdownRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  countdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    alignSelf: 'center',
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    marginTop: 8,
+  },
   countdown: { color: colors.textMuted, fontSize: typography.small.fontSize, textAlign: 'center', fontFamily: fonts.regular },
 });

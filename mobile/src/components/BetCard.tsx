@@ -11,7 +11,7 @@ const STATUS_COLOR: Record<string, string> = { win: colors.win, lose: colors.los
 export default function BetCard({ item }: { item: VoteHistoryItem }) {
   const statusColor = STATUS_COLOR[item.status];
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, { borderColor: statusColor }]}>
       <View style={styles.rowBetween}>
         <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
           <Text style={styles.statusText}>{STATUS_LABEL[item.status]}</Text>
@@ -40,7 +40,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navBackground,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.cardBorder,
     padding: 12,
     marginBottom: 12,
   },
