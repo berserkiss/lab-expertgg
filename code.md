@@ -761,3 +761,51 @@ it. The ledger is the authoritative record; rebuilding the balance from it
 is the correction that would make sense. Left as it is for now, and named
 here so it is a decision rather than an oversight.
 
+### Load tests, two of which are not really load tests
+
+`loadtest/` holds three k6 scenarios. Two of them ask a correctness question
+that only concurrency can ask, and use load as the instrument rather than
+the subject.
+
+**`overdraft.js`** sends fifty simultaneous bets from one wallet at a stake
+of exactly a tenth of the balance. The right answer is arithmetic rather
+than a judgement: ten accepted, forty refused, balance zero, never negative
+on the way. If eleven are accepted, two requests read the same balance and
+the wallet paid for one of them twice. This is the same property the
+threaded unit test checks, asked of real connections through real worker
+processes.
+
+**`ad-reward-cooldown.js`** asks the same kind of question about a clock
+instead of an amount: ten simultaneous claims of a once-a-minute reward. It
+asserts *at most* one is granted, not exactly one, because whether the
+window is open depends on when the wallet last claimed - which the script
+does not control. At most one is the invariant; exactly one would only be a
+statement about the fixture's recent history. Measured: five simultaneous
+claims, one granted, balance moved by exactly 250.
+
+**`browse.js`** is the ordinary kind - it pages through the match list under
+ten users and reports p(95).
+
+Two things this exercise taught that are worth keeping:
+
+**Checks do not fail a run; thresholds do.** A script full of `check()` calls
+and no `thresholds` reports its failures and exits 0, and CI calls that
+green.
+
+**And a threshold on a metric with no samples passes.** The first run here
+died in `setup()` on a 400 from the login endpoint, and every gate still
+reported `✓ rate==1 rate=0.00%`. Both mutating scripts now count their
+attempts and fail unless the wave actually happened - the same trap as a
+test that asserts a constant equals itself, wearing different clothes.
+
+The 400 was worth understanding too: k6 ran in a container and reached the
+host as `host.docker.internal`, which is not in `ALLOWED_HOSTS`, so Django
+rejected the request before any view saw it.
+
+Running them against `manage.py runserver` measures the development server,
+not the application: at fifty simultaneous connections it dropped 33 of them
+rather than answering. The money was still exactly right for the seventeen
+that got through, which is the reassuring half of that observation. The CI
+job runs gunicorn with three workers, as the droplet does. It is manual on
+both pipelines.
+

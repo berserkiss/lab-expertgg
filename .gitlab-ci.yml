@@ -1,6 +1,10 @@
 stages:
   - test
   - deploy
+  # Last and manual: a load test on every push burns minutes and decides
+  # nothing. Being after `deploy` also means a manual job sitting unstarted
+  # never holds a deploy back.
+  - loadtest
 
 # Same gate as the GitHub pipeline: nothing reaches the droplet until the
 # payout and wallet-concurrency tests have passed.
@@ -114,3 +118,49 @@ deploy_backend:
     # See the GitHub workflow: the lock lives on the droplet because the
     # two pipelines race across providers, where no `resource_group:` reaches.
     - ssh root@$DEPLOY_HOST "flock -w 600 /var/lock/expertgg.deploy -c 'cd /root/lab-expertgg && git fetch origin main && git reset --hard origin/main && bash deploy/remote-deploy.sh'"
+
+
+# See loadtest/README.md. Runs gunicorn rather than the development server,
+# which cannot take a wave of fifty connections and drops them instead of
+# answering - failing the scenario for a reason unrelated to the code.
+loadtest:
+  stage: loadtest
+  image: python:3.13
+  when: manual
+  services:
+    - name: postgres:16
+      alias: postgres
+  variables:
+    POSTGRES_DB: lab_expertgg
+    POSTGRES_USER: lab_expertgg
+    POSTGRES_PASSWORD: devpassword
+    SECRET_KEY: ci-secret-not-used-anywhere-else
+    FORCE_HTTPS: 'False'
+    DB_HOST: postgres
+    DB_NAME: lab_expertgg
+    DB_USER: lab_expertgg
+    DB_PASSWORD: devpassword
+    K6_VERSION: v0.54.0
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq curl
+    - curl -sL "https://github.com/grafana/k6/releases/download/$K6_VERSION/k6-$K6_VERSION-linux-amd64.tar.gz" | tar xz --strip-components=1 -C /usr/local/bin "k6-$K6_VERSION-linux-amd64/k6"
+    - cd backend
+    - pip install -q -r requirements.txt
+    - python manage.py migrate --noinput
+    - gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 --access-logfile gunicorn.log --error-logfile gunicorn.log --daemon
+    - for i in $(seq 1 30); do code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/matches/ || true); if [ "$code" != "000" ]; then echo "API up (HTTP $code)"; break; fi; sleep 1; done
+    - cd ..
+  script:
+    # Re-seeded before each money-spending scenario: the previous one leaves
+    # the wallet empty, and an empty wallet makes the next run pass while
+    # checking nothing.
+    - (cd backend && python manage.py seed_api_tests)
+    - k6 run loadtest/overdraft.js
+    - (cd backend && python manage.py seed_api_tests)
+    - k6 run loadtest/ad-reward-cooldown.js
+    - k6 run loadtest/browse.js
+  artifacts:
+    when: always
+    paths:
+      - backend/gunicorn.log
+

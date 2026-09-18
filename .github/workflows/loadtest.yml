@@ -1,0 +1,94 @@
+name: Load tests
+
+# Manual only. A load test on every push burns minutes and decides nothing;
+# this is for when something about locking, paging or the wallet has changed,
+# and for showing that the locks hold.
+on:
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: 'Simultaneous bets in the overdraft scenario'
+        default: '50'
+
+jobs:
+  k6:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: lab_expertgg
+          POSTGRES_USER: lab_expertgg
+          POSTGRES_PASSWORD: devpassword
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SECRET_KEY: ci-secret-not-used-anywhere-else
+      FORCE_HTTPS: 'False'
+      DB_HOST: localhost
+      DB_NAME: lab_expertgg
+      DB_USER: lab_expertgg
+      DB_PASSWORD: devpassword
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -q -r requirements.txt
+
+      # gunicorn with three workers, the same server the droplet runs. The
+      # development server cannot take a wave of fifty connections - it drops
+      # them instead of answering, which fails the scenario for a reason that
+      # has nothing to do with the code under test.
+      - name: Start the API the way production runs it
+        working-directory: backend
+        run: |
+          python manage.py migrate --noinput
+          gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 \
+            --access-logfile gunicorn.log --error-logfile gunicorn.log --daemon
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/matches/ || true)
+            if [ "$code" != "000" ]; then echo "API up (HTTP $code)"; break; fi
+            sleep 1
+          done
+
+      # Re-seeded before each money-spending scenario: the previous one
+      # leaves the wallet empty, and an empty wallet makes the next run pass
+      # while checking nothing.
+      - name: Overdraft under a stampede
+        working-directory: backend
+        run: python manage.py seed_api_tests
+      - run: >-
+          docker run --rm -i --network host
+          -e BASE_URL=http://127.0.0.1:8000
+          -e ATTEMPTS=${{ inputs.attempts }}
+          grafana/k6 run - < loadtest/overdraft.js
+
+      - name: Reward cooldown under a stampede
+        working-directory: backend
+        run: python manage.py seed_api_tests
+      - run: >-
+          docker run --rm -i --network host
+          -e BASE_URL=http://127.0.0.1:8000
+          grafana/k6 run - < loadtest/ad-reward-cooldown.js
+
+      - name: Browsing the match list
+        run: >-
+          docker run --rm -i --network host
+          -e BASE_URL=http://127.0.0.1:8000
+          grafana/k6 run - < loadtest/browse.js
+
+      - name: Keep the server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: loadtest-server-log
+          path: backend/gunicorn.log
