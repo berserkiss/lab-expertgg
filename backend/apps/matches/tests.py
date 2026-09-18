@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -31,11 +31,24 @@ class MatchListTests(APITestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="viewer", email="viewer@example.com", password="pass12345")
         self.client.force_authenticate(user=self.user)
-        now = timezone.now()
-        self.today_match = make_match(start_time=now + timedelta(hours=2))
-        self.tomorrow_match = make_match(start_time=now + timedelta(days=1, hours=1))
-        self.next_week_match = make_match(start_time=now + timedelta(days=6))
-        self.lol_match = make_match(game_slug="lol", game_name="League of Legends", start_time=now + timedelta(hours=3))
+        # Anchored to midday on each date rather than to `now + 2h`. The view
+        # filters on the calendar date (timezone.localdate(), and TIME_ZONE is
+        # UTC), so a fixture placed a couple of hours from now lands on
+        # tomorrow's date whenever the suite runs late in the UTC day - these
+        # two tests failed for that reason alone, on nothing but the clock.
+        today = timezone.localdate()
+        self.today_match = make_match(start_time=self._midday(today))
+        self.tomorrow_match = make_match(start_time=self._midday(today + timedelta(days=1)))
+        self.next_week_match = make_match(start_time=self._midday(today + timedelta(days=6)))
+        self.lol_match = make_match(
+            game_slug="lol", game_name="League of Legends", start_time=self._midday(today, hour=13)
+        )
+
+    @staticmethod
+    def _midday(date, hour=12):
+        return timezone.make_aware(
+            datetime.combine(date, time(hour)), timezone.get_current_timezone()
+        )
 
     def _ids(self, response):
         data = response.json()

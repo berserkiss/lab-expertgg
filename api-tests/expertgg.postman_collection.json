@@ -1,0 +1,761 @@
+{
+  "info": {
+    "name": "expert gg API",
+    "description": "Assertive API tests for the expert gg backend.\n\nEvery request checks something; none of them exist just to be clicked. Run order matters - the refusals come before the successful bet, and the token is captured once at sign-in and inherited by everything after it.\n\nNeeds `python manage.py seed_api_tests` to have run against the same database, which creates the user, the balance and enough matches for a second page.\n\nRun it headless with newman; see api-tests/README.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Auth",
+      "description": "Signing in, and proving the endpoints actually require it.",
+      "item": [
+        {
+          "name": "Me is refused without a token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            },
+            "description": "A protected endpoint has to be protected. Run before signing in,\nso a leaked token from a previous run cannot make this pass.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"says why\", () => pm.expect(pm.response.json()).to.have.property(\"detail\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test(\"returns both tokens\", () => {",
+                  "  pm.expect(body).to.have.property(\"access\");",
+                  "  pm.expect(body).to.have.property(\"refresh\");",
+                  "});",
+                  "// Everything after this inherits the bearer token from the",
+                  "// collection, so it is set once, here, and never pasted around.",
+                  "pm.collectionVariables.set(\"access_token\", body.access);",
+                  "pm.collectionVariables.set(\"refresh_token\", body.refresh);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login with a wrong password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/auth/login/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"definitely-not-the-password\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"no token is handed out\", () => {",
+                  "  pm.expect(pm.response.json()).to.not.have.property(\"access\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const me = pm.response.json();",
+                  "pm.test(\"has the fields the app reads\", () => {",
+                  "  [\"id\", \"email\", \"username\", \"balance\"].forEach(f => pm.expect(me).to.have.property(f));",
+                  "});",
+                  "pm.test(\"balance is a non-negative integer\", () => {",
+                  "  pm.expect(me.balance).to.be.a(\"number\").and.to.be.at.least(0);",
+                  "});",
+                  "pm.collectionVariables.set(\"balance_before\", me.balance);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Matches and pagination",
+      "description": "The list the Play screen reads, including the paging that used to repeat and skip rows.",
+      "item": [
+        {
+          "name": "List matches",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/matches/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json();",
+                  "pm.test(\"is a page, not a bare list\", () => {",
+                  "  [\"count\", \"next\", \"previous\", \"results\"].forEach(f => pm.expect(page).to.have.property(f));",
+                  "});",
+                  "pm.test(\"the fixture gives us more than one page\", () => {",
+                  "  pm.expect(page.count).to.be.above(20);",
+                  "  pm.expect(page.next).to.be.a(\"string\");",
+                  "});",
+                  "",
+                  "// The payout rule travels to the client on every match, so no",
+                  "// screen has to hardcode what a win pays.",
+                  "pm.test(\"every match quotes the payout rule\", () => {",
+                  "  page.results.forEach(m => {",
+                  "    pm.expect(m.payout_multiplier, `match ${m.id}`).to.be.a(\"number\");",
+                  "    pm.expect(m.payout_bonus, `match ${m.id}`).to.be.a(\"number\");",
+                  "  });",
+                  "});",
+                  "",
+                  "const bettable = page.results.filter(m => [\"upcoming\", \"live\"].includes(m.status));",
+                  "pm.test(\"there is something to bet on\", () => pm.expect(bettable).to.not.be.empty);",
+                  "const target = bettable[0];",
+                  "pm.collectionVariables.set(\"match_id\", target.id);",
+                  "pm.collectionVariables.set(\"team_id\", target.team_a.id);",
+                  "pm.collectionVariables.set(\"payout_multiplier\", target.payout_multiplier);",
+                  "pm.collectionVariables.set(\"payout_bonus\", target.payout_bonus);",
+                  "",
+                  "// A team that is demonstrably not in the target match, taken from",
+                  "// the data rather than guessed, so the \"wrong team\" case below",
+                  "// exercises our rule and not DRF's unknown-primary-key check.",
+                  "const pair = [target.team_a.id, target.team_b.id];",
+                  "const elsewhere = page.results.find(m => ![m.team_a.id, m.team_b.id].some(id => pair.includes(id)));",
+                  "pm.test(\"found a team from another fixture\", () => pm.expect(elsewhere).to.not.be.undefined);",
+                  "pm.collectionVariables.set(\"outsider_team_id\", elsewhere.team_a.id);",
+                  "",
+                  "pm.collectionVariables.set(\"page1_ids\", JSON.stringify(page.results.map(m => m.id)));",
+                  "pm.collectionVariables.set(\"next_url\", page.next);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Second page shares nothing with the first",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{next_url}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json();",
+                  "const first = JSON.parse(pm.collectionVariables.get(\"page1_ids\"));",
+                  "const second = page.results.map(m => m.id);",
+                  "",
+                  "// This is the regression: ordering by start_time alone is not",
+                  "// unique, and Postgres may order ties differently per query, so",
+                  "// page two repeated rows from page one and skipped others. The",
+                  "// lists now carry id as a tiebreak.",
+                  "pm.test(\"no row appears on both pages\", () => {",
+                  "  const overlap = second.filter(id => first.includes(id));",
+                  "  pm.expect(overlap, `ids on both pages: ${overlap}`).to.be.empty;",
+                  "});",
+                  "pm.test(\"no row appears twice within the page\", () => {",
+                  "  pm.expect(new Set(second).size).to.eql(second.length);",
+                  "});",
+                  "pm.test(\"the two pages together cover the count\", () => {",
+                  "  pm.expect(first.length + second.length).to.be.at.most(page.count);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Match detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/matches/{{match_id}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "{{match_id}}",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const m = pm.response.json();",
+                  "pm.test(\"is the match we asked for\", () => {",
+                  "  pm.expect(String(m.id)).to.eql(String(pm.collectionVariables.get(\"match_id\")));",
+                  "});",
+                  "pm.test(\"carries both teams\", () => {",
+                  "  pm.expect(m.team_a).to.have.property(\"name\");",
+                  "  pm.expect(m.team_b).to.have.property(\"name\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Bets the rules refuse",
+      "description": "Each of these is a rule in apps/votes/betting.py. They run before the happy path so a refusal cannot be masked by a balance the successful bet already changed.",
+      "item": [
+        {
+          "name": "Stake below the minimum",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/matches/{{match_id}}/vote/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "{{match_id}}",
+                "vote",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"predicted_team\": \"{{team_id}}\",\n  \"stake\": 0\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"blames the stake field\", () => {",
+                  "  pm.expect(pm.response.json()).to.have.property(\"stake\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "A team that is not playing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/matches/{{match_id}}/vote/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "{{match_id}}",
+                "vote",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"predicted_team\": \"{{outsider_team_id}}\",\n  \"stake\": 10\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"blames the team field\", () => {",
+                  "  pm.expect(pm.response.json()).to.have.property(\"predicted_team\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "More than the balance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/matches/{{match_id}}/vote/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "{{match_id}}",
+                "vote",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"predicted_team\": \"{{team_id}}\",\n  \"stake\": 99999999\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"blames the stake field\", () => {",
+                  "  pm.expect(pm.response.json()).to.have.property(\"stake\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Nothing was taken by the refusals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "// A refused bet that still debits is the worst kind of bug here,",
+                  "// and the cheapest to check for.",
+                  "pm.test(\"the balance is untouched\", () => {",
+                  "  pm.expect(pm.response.json().balance).to.eql(",
+                  "    Number(pm.collectionVariables.get(\"balance_before\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Placing a bet",
+      "item": [
+        {
+          "name": "Place the bet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/matches/{{match_id}}/vote/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "{{match_id}}",
+                "vote",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"predicted_team\": \"{{team_id}}\",\n  \"stake\": 50\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 201\", () => pm.response.to.have.status(201));",
+                  "const vote = pm.response.json();",
+                  "pm.test(\"comes back active\", () => pm.expect(vote.status).to.eql(\"active\"));",
+                  "pm.test(\"kept the stake we sent\", () => pm.expect(vote.stake).to.eql(50));",
+                  "pm.collectionVariables.set(\"vote_id\", vote.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The balance fell by exactly the stake",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/auth/me/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"debited 50, no more and no less\", () => {",
+                  "  pm.expect(pm.response.json().balance).to.eql(",
+                  "    Number(pm.collectionVariables.get(\"balance_before\")) - 50);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The bet is in the match book",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/matches/{{match_id}}/bets/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "matches",
+                "{{match_id}}",
+                "bets",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const ids = pm.response.json().results.map(v => v.id);",
+                  "pm.test(\"our bet is listed\", () => {",
+                  "  pm.expect(ids.map(String)).to.include(String(pm.collectionVariables.get(\"vote_id\")));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "The bet is in history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/votes/history/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "votes",
+                "history",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const page = pm.response.json();",
+                  "const ours = page.results.find(v => String(v.id) === String(pm.collectionVariables.get(\"vote_id\")));",
+                  "pm.test(\"our bet is there\", () => pm.expect(ours).to.not.be.undefined);",
+                  "pm.test(\"still active, and shows the stake at risk\", () => {",
+                  "  pm.expect(ours.status).to.eql(\"active\");",
+                  "  pm.expect(ours.amount).to.eql(50);",
+                  "});",
+                  "pm.test(\"newest first\", () => {",
+                  "  const dates = page.results.map(v => new Date(v.created_at).getTime());",
+                  "  pm.expect(dates).to.eql([...dates].sort((a, b) => b - a));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Leaderboard",
+      "item": [
+        {
+          "name": "Leaderboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/leaderboard/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "leaderboard",
+                ""
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status is 200\", () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json().results;",
+                  "pm.test(\"rows carry a name and a balance\", () => {",
+                  "  rows.forEach(r => {",
+                  "    pm.expect(r).to.have.property(\"username\");",
+                  "    pm.expect(r.balance).to.be.a(\"number\");",
+                  "  });",
+                  "});",
+                  "pm.test(\"ranked highest first\", () => {",
+                  "  const balances = rows.map(r => r.balance);",
+                  "  pm.expect(balances).to.eql([...balances].sort((a, b) => b - a));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "match_id",
+      "value": ""
+    },
+    {
+      "key": "team_id",
+      "value": ""
+    },
+    {
+      "key": "outsider_team_id",
+      "value": ""
+    },
+    {
+      "key": "vote_id",
+      "value": ""
+    },
+    {
+      "key": "balance_before",
+      "value": ""
+    },
+    {
+      "key": "page1_ids",
+      "value": ""
+    },
+    {
+      "key": "next_url",
+      "value": ""
+    },
+    {
+      "key": "payout_multiplier",
+      "value": ""
+    },
+    {
+      "key": "payout_bonus",
+      "value": ""
+    }
+  ]
+}

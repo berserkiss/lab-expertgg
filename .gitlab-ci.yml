@@ -35,6 +35,50 @@ test_backend:
     - python manage.py makemigrations --check --dry-run
     - python manage.py test --verbosity 2
 
+# The same API from the outside - see the GitHub workflow for why both
+# exist. It sits in the `test` stage, so deploy cannot start until it is
+# green; GitLab needs no explicit `needs` for that.
+api_tests:
+  stage: test
+  image: python:3.13
+  services:
+    - name: postgres:16
+      alias: postgres
+  variables:
+    POSTGRES_DB: lab_expertgg
+    POSTGRES_USER: lab_expertgg
+    POSTGRES_PASSWORD: devpassword
+    SECRET_KEY: ci-secret-not-used-anywhere-else
+    FORCE_HTTPS: 'False'
+    DB_HOST: postgres
+    DB_NAME: lab_expertgg
+    DB_USER: lab_expertgg
+    DB_PASSWORD: devpassword
+  rules:
+    - changes:
+        - backend/**/*
+        - api-tests/**/*
+        - .gitlab-ci.yml
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq nodejs npm curl
+    - cd backend
+    - pip install -q -r requirements.txt
+    - python manage.py migrate --noinput
+    - python manage.py seed_api_tests
+    - python manage.py runserver 127.0.0.1:8000 --noreload > server.log 2>&1 &
+    # See the GitHub workflow: any status means Django answered; 000 means
+    # nothing is listening yet.
+    - for i in $(seq 1 30); do code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/matches/ || true); if [ "$code" != "000" ]; then echo "API up (HTTP $code)"; break; fi; sleep 1; done
+    - cd ..
+  script:
+    - npx --yes newman run api-tests/expertgg.postman_collection.json -e api-tests/local.postman_environment.json --reporters cli,junit --reporter-junit-export newman-report.xml
+  artifacts:
+    when: always
+    paths:
+      - backend/server.log
+    reports:
+      junit: newman-report.xml
+
 deploy_backend:
   stage: deploy
   image: alpine:latest

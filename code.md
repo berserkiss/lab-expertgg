@@ -607,7 +607,83 @@ migration fails in CI rather than half-way through a deploy.
   `sslip.io` hostname, with no build variant or env injection — and the
   signing keystore is gitignored and stored nowhere else, so a rebuilt server
   strands every installed copy and there is no key to ship an update with.
-- **`refreshAccessToken` cannot tell an expired session from a dropped
-  connection** and resolves both by deleting the refresh token. Every deploy
-  ends in `systemctl restart expertgg`, which is exactly such a window, so
-  this logs people out routinely rather than theoretically.
+- ~~**`refreshAccessToken` cannot tell an expired session from a dropped
+  connection.**~~ Fixed — see "A dead session and a dead connection are not
+  the same thing" below.
+
+## Testing: three layers, and what each one is for
+
+The suite was backend-only, and that showed. Every mobile defect found in
+this project so far was found by reading the code, never by a test failing.
+
+**Django tests (`backend/apps/*/tests.py`)** know the domain and talk to it
+directly: payout arithmetic, row locking, idempotency of settling and
+refunding, the overdraw race with real threads under `TransactionTestCase`.
+That last one is only meaningful because CI runs a real Postgres, where
+`select_for_update` actually locks.
+
+**API tests (`api-tests/`)** are a Postman collection run headless by newman.
+They see only what a client sees, which is exactly the class of thing the
+Django suite cannot fail on: a serializer field that stopped being sent, a
+status code that changed, a `next` link that repeats a row. Two of its
+assertions are regressions rather than hypotheticals — page two sharing rows
+with page one, and a refused bet still debiting the wallet.
+
+The collection lives in this repository, not one of its own, because it
+tests this API: the endpoint and its test change in the same commit and
+cannot drift apart. A separate repository is for a suite shared across
+services or teams.
+
+**Jest (`mobile/src/**/__tests__`)** covers the client logic that has no
+server to check it. It starts with the token refresh, because that is where
+the client makes a decision the backend cannot see.
+
+Both pipelines gate the deploy on the first two; GitHub's `deploy` declares
+`needs: [test, api-tests]`, and on GitLab both sit in the `test` stage ahead
+of `deploy`.
+
+### A dead session and a dead connection are not the same thing
+
+`refreshAccessToken` returned `null` for both — the server ruling the
+session over, and the server not answering at all — and `null` meant delete
+both tokens and send the user to the sign-in screen. The refresh token is
+good for fourteen days, and every deploy ends in `systemctl restart
+expertgg`, so a request that met a 401 and then a connection refused threw
+away a live session. Signing someone out is not recoverable from their side:
+they have to type a password.
+
+It returns three outcomes now. Only an answer from the refresh endpoint
+itself — SimpleJWT replies `401 token_not_valid` for an expired or
+blacklisted token — clears the tokens. No response at all, or a 5xx, leaves
+them alone and fails just the one request; the screen shows its error state
+and the next call retries.
+
+Worth being precise about the blast radius, because it decides what to test:
+being offline on its own never logged anyone out. The response interceptor
+only runs the refresh path for a real `401`, and an offline request has no
+response at all. The window is narrower and more specific — the access token
+expires *and* the refresh request then fails to get an answer — which is
+precisely what a backend restart produces.
+
+### Getting the mobile suite to run at all
+
+`npm test` had been failing since the app was scaffolded: `async-storage`
+ships untranspiled ESM, `transformIgnorePatterns` did not cover it, and the
+scaffold `App.test.tsx` could not even load. Nobody saw it because no
+pipeline ran it — the same shape as the backend test that sat red for weeks
+earlier in this project. A test nothing runs is not a test, and this is the
+second time that has cost something here.
+
+### A test that failed on the time of day
+
+Two match-list tests started failing at 22:15 UTC and would have passed
+again by morning. The view filters on the calendar date, `TIME_ZONE` is UTC,
+and the fixtures were built as `now + 2h` - so late in the UTC day, "today's
+match" is created on tomorrow's date. Nothing to do with the code under
+test; the fixture was the bug. They are anchored to midday on each date now.
+
+Worth noting because CI runs in UTC: this would have turned into a pipeline
+that fails for three hours every evening and passes the rest of the time,
+which is the most expensive kind of test there is - one that teaches people
+to re-run the job instead of reading it.
+

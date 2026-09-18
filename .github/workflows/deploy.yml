@@ -9,6 +9,7 @@ on:
       # exercise the pipeline.
       - '.github/workflows/deploy.yml'
       - 'deploy/remote-deploy.sh'
+      - 'api-tests/**'
   workflow_dispatch: {}
 
 jobs:
@@ -59,9 +60,81 @@ jobs:
         working-directory: backend
         run: python manage.py test --verbosity 2
 
+  # The same API from the outside: real HTTP, real JSON, the assertions that
+  # live in the Postman collection rather than in Python. It catches a
+  # different class of thing from the unit suite - a serializer field that
+  # stopped being sent, a status code that changed, paging that repeats a
+  # row - and it is the artifact a reviewer can open and run by hand.
+  api-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: lab_expertgg
+          POSTGRES_USER: lab_expertgg
+          POSTGRES_PASSWORD: devpassword
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SECRET_KEY: ci-secret-not-used-anywhere-else
+      FORCE_HTTPS: 'False'
+      DB_HOST: localhost
+      DB_NAME: lab_expertgg
+      DB_USER: lab_expertgg
+      DB_PASSWORD: devpassword
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -q -r requirements.txt
+      - name: Prepare the database
+        working-directory: backend
+        run: |
+          python manage.py migrate --noinput
+          python manage.py seed_api_tests
+      - name: Start the API
+        working-directory: backend
+        run: |
+          python manage.py runserver 127.0.0.1:8000 --noreload > server.log 2>&1 &
+          # Any HTTP status means Django answered - 401 is the expected one
+          # for an unauthenticated list, and it proves the app is up just as
+          # well as a 200 would. Only curl's 000 means nothing is listening.
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/matches/ || true)
+            if [ "$code" != "000" ]; then echo "API up (HTTP $code)"; break; fi
+            sleep 1
+          done
+      - name: Run the collection
+        run: >-
+          npx --yes newman run api-tests/expertgg.postman_collection.json
+          -e api-tests/local.postman_environment.json
+          --reporters cli,junit --reporter-junit-export newman-report.xml
+      - name: Keep the report and the server log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: |
+            newman-report.xml
+            backend/server.log
+
   deploy:
     runs-on: ubuntu-latest
-    needs: test
+    # Both gates, not just the unit suite.
+    needs: [test, api-tests]
     steps:
       - name: Deploy over SSH
         env:
