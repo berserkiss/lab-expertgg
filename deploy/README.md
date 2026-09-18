@@ -46,8 +46,13 @@ minutes and then fails loudly rather than interleaving.
 **The script.** The chain used to be written out in full in both pipeline
 files, which is two copies of a command that migrates a money ledger. It is
 now [`remote-deploy.sh`](remote-deploy.sh), and it takes a `pg_dump` into
-`/root/backups` before `migrate`. The dump is not optional: `set -e` means a
-deploy whose backup failed does not migrate. Thirty are kept.
+`/root/backups` before `migrate`. It connects with the credentials out of
+`backend/.env`, the same way Django does, so it works whether Postgres is
+installed on the box or is a container publishing its port. The dump is not
+optional: `set -e` means a deploy whose backup failed does not migrate.
+Thirty are kept. The droplet needs `postgresql-client` for this; if
+`pg_dump` is missing the deploy stops and says so rather than migrating
+unprotected.
 
 Restoring one:
 
