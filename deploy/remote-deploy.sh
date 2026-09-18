@@ -43,14 +43,27 @@ pip install -q -r requirements.txt
 # not a rollback problem, it is people's balances: the ledger is the only
 # record that a bet was ever placed or paid.
 echo "==> Backing up $DB_NAME as $DB_USER@$DB_HOST:$DB_PORT"
-if ! command -v pg_dump > /dev/null; then
-  echo "pg_dump is not installed on this host - install postgresql-client," >&2
-  echo "because this deploy will not migrate a ledger it cannot back up." >&2
-  exit 1
-fi
 mkdir -p "$BACKUP_DIR"
 DUMP="$BACKUP_DIR/$(date +%F-%H%M%S).dump"
-PGPASSWORD="${DB_PASSWORD:-}" pg_dump -Fc -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" > "$DUMP"
+# Two ways the client can be reachable, in the order that needs no install.
+# A host with Postgres in a container has no pg_dump of its own but has one
+# inside the container - and that one is guaranteed to match the server
+# version, which a separately-installed client is not.
+DB_CONTAINER=""
+if command -v docker > /dev/null 2>&1; then
+  DB_CONTAINER=$(docker ps --format '{{.Names}} {{.Image}}' | awk '$2 ~ /postgres/ {print $1; exit}')
+fi
+if command -v pg_dump > /dev/null 2>&1; then
+  PGPASSWORD="${DB_PASSWORD:-}" pg_dump -Fc -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" > "$DUMP"
+elif [ -n "$DB_CONTAINER" ]; then
+  echo "    through the $DB_CONTAINER container"
+  docker exec -e PGPASSWORD="${DB_PASSWORD:-}" "$DB_CONTAINER" pg_dump -Fc -U "$DB_USER" "$DB_NAME" > "$DUMP"
+else
+  echo "No pg_dump on this host and no Postgres container to borrow one from." >&2
+  echo "Run: apt-get update && apt-get install -y postgresql-client" >&2
+  echo "This deploy will not migrate a ledger it cannot back up." >&2
+  exit 1
+fi
 echo "    $DUMP ($(du -h "$DUMP" | cut -f1))"
 ls -1t "$BACKUP_DIR"/*.dump | tail -n "+$((KEEP_BACKUPS + 1))" | xargs -r rm --
 

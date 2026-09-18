@@ -50,9 +50,13 @@ now [`remote-deploy.sh`](remote-deploy.sh), and it takes a `pg_dump` into
 `backend/.env`, the same way Django does, so it works whether Postgres is
 installed on the box or is a container publishing its port. The dump is not
 optional: `set -e` means a deploy whose backup failed does not migrate.
-Thirty are kept. The droplet needs `postgresql-client` for this; if
-`pg_dump` is missing the deploy stops and says so rather than migrating
-unprotected.
+Thirty are kept.
+
+The droplet needs a `pg_dump` from somewhere. If one is installed it is
+used; otherwise the script borrows the one inside the Postgres container,
+which has the advantage of always matching the server version. If neither
+exists the deploy stops and tells you to
+`apt-get install -y postgresql-client`, rather than migrating unprotected.
 
 Restoring one:
 
