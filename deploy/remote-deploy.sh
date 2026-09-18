@@ -51,7 +51,9 @@ DUMP="$BACKUP_DIR/$(date +%F-%H%M%S).dump"
 # version, which a separately-installed client is not.
 DB_CONTAINER=""
 if command -v docker > /dev/null 2>&1; then
-  DB_CONTAINER=$(docker ps --format '{{.Names}} {{.Image}}' | awk '$2 ~ /postgres/ {print $1; exit}')
+  # `|| true`: docker being installed does not mean its daemon answers, and
+  # under `set -e` a failed command substitution would kill the deploy here.
+  DB_CONTAINER=$(docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | awk '$2 ~ /postgres/ {print $1; exit}') || true
 fi
 if command -v pg_dump > /dev/null 2>&1; then
   PGPASSWORD="${DB_PASSWORD:-}" pg_dump -Fc -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" > "$DUMP"
@@ -59,13 +61,16 @@ elif [ -n "$DB_CONTAINER" ]; then
   echo "    through the $DB_CONTAINER container"
   docker exec -e PGPASSWORD="${DB_PASSWORD:-}" "$DB_CONTAINER" pg_dump -Fc -U "$DB_USER" "$DB_NAME" > "$DUMP"
 else
-  echo "No pg_dump on this host and no Postgres container to borrow one from." >&2
-  echo "Run: apt-get update && apt-get install -y postgresql-client" >&2
-  echo "This deploy will not migrate a ledger it cannot back up." >&2
-  exit 1
+  # Last resort, and it needs nothing installed: Django's own dumpdata,
+  # through the venv that is already active. It saves the rows rather than
+  # the schema, which is the half that matters - a migration that goes
+  # wrong loses balances, not table definitions. Restore with loaddata.
+  echo "    no pg_dump here, falling back to manage.py dumpdata"
+  DUMP="${DUMP%.dump}.json"
+  python manage.py dumpdata --natural-foreign --natural-primary     --exclude contenttypes --exclude auth.permission --exclude sessions     --output "$DUMP"
 fi
 echo "    $DUMP ($(du -h "$DUMP" | cut -f1))"
-ls -1t "$BACKUP_DIR"/*.dump | tail -n "+$((KEEP_BACKUPS + 1))" | xargs -r rm --
+ls -1t "$BACKUP_DIR"/* | tail -n "+$((KEEP_BACKUPS + 1))" | xargs -r rm --
 
 echo "==> Migrating"
 python manage.py migrate --noinput
