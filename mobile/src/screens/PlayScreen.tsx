@@ -59,7 +59,10 @@ export default function PlayScreen({ navigation }: any) {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([reload(), refreshUser()]);
+      // reload() reports its own failure through the list's error state;
+      // refreshUser() rejecting would otherwise escape this handler as an
+      // unhandled rejection, and a stale balance is not worth a red box.
+      await Promise.all([reload(), refreshUser().catch(() => {})]);
     } finally {
       setRefreshing(false);
     }

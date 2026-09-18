@@ -23,7 +23,14 @@ export default function BalanceBadge() {
 
   useFocusEffect(
     useCallback(() => {
-      const id = setInterval(refreshUser, POLL_MS);
+      // A poll tick that fails is swallowed on purpose: the next tick
+      // retries, and a session that has actually expired is handled
+      // centrally by the client's auth-failure handler. Left unhandled it
+      // surfaces as an "Uncaught (in promise)" red box on whatever screen
+      // happens to be open whenever the backend blips or restarts.
+      const id = setInterval(() => {
+        refreshUser().catch(() => {});
+      }, POLL_MS);
       return () => clearInterval(id);
     }, [refreshUser]),
   );
