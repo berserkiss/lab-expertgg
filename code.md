@@ -721,3 +721,43 @@ piece of state written but never read - which are now gone. The two
 remaining warnings are React Navigation's documented pattern for tab labels
 and icons, so they stay warnings.
 
+### The balance invariant is held by code now, not by a docstring
+
+`debit()` and `credit()` were a read-modify-write on whatever instance the
+caller happened to hold, with a docstring asking callers to take a row lock
+first. Every production call site did. That is not the same as the rule
+holding: an invariant that survives because people remember to read a
+docstring is one bad afternoon from not surviving, and the failure is
+silent - two calls against the same stale instance each write their own idea
+of the balance, and the later write erases the earlier one's money.
+
+Both now go through one place that locks and re-reads the row inside the
+transaction that moves it, and writes the ledger row in the same
+transaction, because the balance and the ledger row are one fact recorded
+twice. Re-locking a row the caller already holds costs nothing - it is the
+same transaction - so the existing call sites are untouched. The caller's
+instance is told the new balance afterwards, since the ad-reward view
+answers the request with exactly that attribute.
+
+Three tests fail against the previous version, including one that asserts
+only that the ledger sums to the balance after five unsynchronised threads
+have moved money. That property is the one the whole design rests on.
+
+**And the admin can no longer type a balance in.** It was an editable field,
+and writing to it left no `CoinTransaction` behind - so the balance and the
+ledger parted company with no record of who did it or why. That is precisely
+the drift `reconcile_wallets` goes looking for, and the application was
+manufacturing it through its own admin. `balance` is read-only now, the
+transaction list is read-only too (a ledger whose past can be edited is not
+a ledger), and the test posts an edited balance the way a person would
+rather than asserting that a setting has the value it was given.
+
+**One consequence to face rather than leave implied:** with the only writers
+of a balance being `credit()` and `debit()`, nothing legitimate can create
+drift any more. So `reconcile_wallets --apply`, which books an adjustment to
+make the ledger agree with the balance, now has its direction backwards - if
+drift ever appears it is evidence of a bug, and applying the command erases
+it. The ledger is the authoritative record; rebuilding the balance from it
+is the correction that would make sense. Left as it is for now, and named
+here so it is a decision rather than an oversight.
+

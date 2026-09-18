@@ -1,14 +1,12 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
 
 
 class InsufficientBalance(Exception):
     """Raised by Wallet.debit() when the wallet doesn't hold enough gg.
 
-    Callers are expected to hold a row lock on the wallet (select_for_update()
-    inside transaction.atomic()) before calling debit(), and to translate this
-    into whatever error response fits their call site (e.g. a 400 with a
-    field-specific message from an API serializer)."""
+    Callers translate this into whatever error response fits their call site
+    (e.g. a 400 with a field-specific message from an API serializer)."""
 
 
 class Wallet(models.Model):
@@ -18,17 +16,49 @@ class Wallet(models.Model):
     def __str__(self):
         return f"{self.user} - {self.balance} gg"
 
+    def _move(self, delta, transaction_type, related_vote=None):
+        """
+        Change the balance by `delta` and record the matching ledger row.
+
+        The row is locked and re-read here rather than trusted from `self`.
+        This used to be a plain read-modify-write on whatever the caller had
+        in hand, with a docstring asking callers to take the lock first -
+        and every production caller did, so nothing was broken. But an
+        invariant that holds because people remember to read a docstring is
+        one bad afternoon from not holding: two concurrent calls against the
+        same stale instance would each write their own idea of the balance,
+        and the later write would erase the earlier one's money.
+
+        Re-locking a row the caller already locked is free - it is the same
+        transaction - so the existing call sites are unaffected.
+
+        The balance write and the ledger row are in one transaction because
+        the two are the same fact recorded twice. A balance that moved with
+        no transaction behind it is exactly the drift that reconcile_wallets
+        exists to find, and there is no reason for this code to create any.
+        """
+        with transaction.atomic():
+            locked = Wallet.objects.select_for_update().get(pk=self.pk)
+            new_balance = locked.balance + delta
+            if new_balance < 0:
+                raise InsufficientBalance(
+                    f"Wallet {self.pk} has {locked.balance} gg, cannot debit {-delta}."
+                )
+            locked.balance = new_balance
+            locked.save(update_fields=["balance"])
+            locked.transactions.create(
+                amount=delta, type=transaction_type, related_vote=related_vote
+            )
+        # The caller holds its own instance and often reads the balance back
+        # off it (the ad-reward view answers with it), so it is told what the
+        # locked row now says instead of being left with a stale number.
+        self.balance = new_balance
+
     def debit(self, amount, transaction_type, *, related_vote=None):
-        if amount > self.balance:
-            raise InsufficientBalance(f"Wallet {self.pk} has {self.balance} gg, cannot debit {amount}.")
-        self.balance -= amount
-        self.save(update_fields=["balance"])
-        self.transactions.create(amount=-amount, type=transaction_type, related_vote=related_vote)
+        self._move(-amount, transaction_type, related_vote)
 
     def credit(self, amount, transaction_type, *, related_vote=None):
-        self.balance += amount
-        self.save(update_fields=["balance"])
-        self.transactions.create(amount=amount, type=transaction_type, related_vote=related_vote)
+        self._move(amount, transaction_type, related_vote)
 
 
 class CoinTransaction(models.Model):
@@ -39,9 +69,8 @@ class CoinTransaction(models.Model):
         BET_REFUND = "bet_refund", "Bet refund"
         AD_REWARD = "ad_reward", "Ad reward"
         SIGNUP_BONUS = "signup_bonus", "Signup bonus"
-        # Written only by the reconcile_wallets command, to account for
-        # balance set outside credit()/debit() - a seeded or admin-edited
-        # balance leaves no transaction behind on its own.
+        # Written only by the reconcile_wallets command and the test-fixture
+        # seed, to account for a balance set outside credit()/debit().
         ADJUSTMENT = "adjustment", "Adjustment"
 
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions")
