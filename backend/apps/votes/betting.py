@@ -11,7 +11,10 @@ This module is also the single definition of what a bet pays. The API hands
 that rule to the client (see MatchSerializer) so no screen has to hardcode
 it.
 """
+from datetime import timedelta
+
 from django.db import transaction
+from django.utils import timezone
 
 from apps.matches.models import Match
 from apps.wallet.models import CoinTransaction, InsufficientBalance, Wallet
@@ -23,6 +26,13 @@ WIN_MULTIPLIER = 2
 WIN_BONUS = 2
 
 BETTABLE_STATUSES = (Match.Status.UPCOMING, Match.Status.LIVE)
+
+# How long past its start time a match may stay unresolved before the stakes
+# on it are given back. Longer for a match that never reached a terminal
+# status at all: "finished, winner missing" is a hole in one field and will
+# not fill itself, while "still live" may simply be a fixture running long.
+UNRESOLVED_GRACE = timedelta(hours=12)
+ABANDONED_GRACE = timedelta(hours=36)
 
 
 def payout_for(stake):
@@ -115,3 +125,42 @@ def refund_active_votes(match):
             vote.payout = vote.stake
             vote.save(update_fields=["status", "payout"])
         return len(votes)
+
+
+def refund_if_unresolvable(match, now=None):
+    """
+    Give the stakes back once it is clear no winner is ever coming. Returns how many.
+
+    Three shapes of unresolvable, all decided from local state and a clock
+    rather than from the feed - which matters, because the commonest way for
+    a match to become unresolvable is the feed losing it:
+      - cancelled: nothing to wait for, refund at once;
+      - finished with no winner: a walkover, a forfeit, a field the provider
+        never filled in, after UNRESOLVED_GRACE;
+      - never resolved at all - still upcoming or live long after it was due
+        to start, because the fixture was dropped or postponed indefinitely -
+        after ABANDONED_GRACE.
+
+    The match row is locked and re-read inside the transaction that performs
+    the refund. Deciding "no winner is coming" from a read taken outside it
+    can void a match whose winner landed in between: settlement happens
+    inside the sync's own atomic block, so taking this lock is what makes the
+    two orderings exclusive rather than merely unlikely.
+
+    Refunding a match that turns out to have been playable is the survivable
+    error - the bettor gets their stake back rather than losing it - which is
+    why the graces are generous but not infinite.
+    """
+    now = now or timezone.now()
+    with transaction.atomic():
+        match = Match.objects.select_for_update().get(pk=match.pk)
+        if match.status == Match.Status.CANCELED:
+            return refund_active_votes(match)
+        if match.status == Match.Status.FINISHED:
+            if match.winner_id:
+                return 0  # settle_match's job, not this one's
+            if now - match.start_time < UNRESOLVED_GRACE:
+                return 0
+        elif now - match.start_time < ABANDONED_GRACE:
+            return 0
+        return refund_active_votes(match)

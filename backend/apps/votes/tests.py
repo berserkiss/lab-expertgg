@@ -1,5 +1,6 @@
 import threading
 from datetime import timedelta
+from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.db import connection
@@ -8,11 +9,17 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
+from apps.matches.management.commands.sync_pandascore import Command as SyncCommand
 from apps.matches.models import Game, Match, Team, Tournament
+from apps.matches.pandascore import PandaScoreError
 from apps.wallet.models import Wallet
 
-from .betting import (BettingError, WIN_BONUS, WIN_MULTIPLIER, payout_for,
-                      place_bet, refund_active_votes, settle_match)
+# Where fetch_match is looked up, which is the name that has to be patched.
+SYNC = "apps.matches.management.commands.sync_pandascore"
+
+from .betting import (ABANDONED_GRACE, BettingError, UNRESOLVED_GRACE, WIN_BONUS,
+                      WIN_MULTIPLIER, payout_for, place_bet, refund_active_votes,
+                      refund_if_unresolvable, settle_match)
 from .models import Vote
 
 User = get_user_model()
@@ -218,3 +225,203 @@ class BettingOperationTests(TestCase):
 
     def test_payout_is_defined_in_one_place(self):
         self.assertEqual(payout_for(10), 10 * WIN_MULTIPLIER + WIN_BONUS)
+
+
+class PayoutContractTests(APITestCase):
+    """
+    What the API promises a win pays is what settlement actually pays.
+
+    Asserting payout_for() against its own constants passes whatever they
+    are. The contract worth protecting runs from the wire - the numbers the
+    Vote button quotes - to the wallet, so this reads the rule out of the
+    HTTP response and checks the credit against that, never against the
+    module.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="quote", email="quote@example.com", password="pass12345"
+        )
+        self.wallet = self.user.wallet
+        self.wallet.balance = 100
+        self.wallet.save()
+        self.match = make_match()
+        self.client.force_authenticate(self.user)
+
+    def test_the_quoted_rule_is_what_the_wallet_is_credited(self):
+        listed = self.client.get("/api/matches/").data["results"]
+        quoted = next(m for m in listed if m["id"] == self.match.id)
+        multiplier, bonus = quoted["payout_multiplier"], quoted["payout_bonus"]
+
+        stake = 10
+        response = self.client.post(
+            f"/api/matches/{self.match.id}/vote/",
+            {"predicted_team": self.match.team_a.id, "stake": stake},
+        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.match.status = Match.Status.FINISHED
+        self.match.winner = self.match.team_a
+        self.match.save()
+
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 100 - stake + (stake * multiplier + bonus))
+
+
+class UnresolvableRefundTests(TestCase):
+    """
+    A stake must not be able to sit open forever.
+
+    Each branch here is a way a match stops being settleable, and every one
+    of them was reachable in a revision that stranded the money.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="void@example.com", password="x", username="void"
+        )
+        self.wallet = Wallet.objects.get(user=self.user)
+        self.wallet.balance = 100
+        self.wallet.save()
+
+    def _match_with_a_bet(self, age, **overrides):
+        match = make_match(start_time=timezone.now() - age, **overrides)
+        place_bet(self.user, match, match.team_a, 30)
+        return match
+
+    def _balance(self):
+        self.wallet.refresh_from_db()
+        return self.wallet.balance
+
+    def test_finished_with_no_winner_is_refunded_once_the_grace_lapses(self):
+        match = self._match_with_a_bet(UNRESOLVED_GRACE + timedelta(hours=1))
+        # .update() rather than .save(): saving would fire the settlement
+        # receivers, and this test is about the state they both decline.
+        Match.objects.filter(pk=match.pk).update(status=Match.Status.FINISHED)
+
+        self.assertEqual(refund_if_unresolvable(match), 1)
+        self.assertEqual(self._balance(), 100)
+        self.assertEqual(match.votes.get().status, Vote.Status.VOID)
+        # Idempotent, because the sync runs this every ten minutes.
+        self.assertEqual(refund_if_unresolvable(match), 0)
+        self.assertEqual(self._balance(), 100)
+
+    def test_a_winner_that_has_not_landed_yet_is_waited_for(self):
+        match = self._match_with_a_bet(UNRESOLVED_GRACE - timedelta(hours=1))
+        Match.objects.filter(pk=match.pk).update(status=Match.Status.FINISHED)
+
+        self.assertEqual(refund_if_unresolvable(match), 0)
+        self.assertEqual(self._balance(), 70)
+        self.assertEqual(match.votes.get().status, Vote.Status.ACTIVE)
+
+    def test_a_match_with_a_winner_is_left_to_settlement(self):
+        match = self._match_with_a_bet(UNRESOLVED_GRACE + timedelta(hours=1))
+        match.status = Match.Status.FINISHED
+        match.winner = match.team_a
+        match.save()
+
+        self.assertEqual(refund_if_unresolvable(match), 0)
+        self.assertEqual(self._balance(), 70 + payout_for(30))
+        self.assertEqual(match.votes.get().status, Vote.Status.WIN)
+
+    def test_a_match_that_never_resolved_is_refunded_after_the_longer_grace(self):
+        match = self._match_with_a_bet(ABANDONED_GRACE + timedelta(hours=1))
+        Match.objects.filter(pk=match.pk).update(status=Match.Status.LIVE)
+
+        self.assertEqual(refund_if_unresolvable(match), 1)
+        self.assertEqual(self._balance(), 100)
+
+    def test_a_fixture_running_long_is_not_voided_out_from_under_it(self):
+        match = self._match_with_a_bet(UNRESOLVED_GRACE + timedelta(hours=1))
+        Match.objects.filter(pk=match.pk).update(status=Match.Status.LIVE)
+
+        self.assertEqual(refund_if_unresolvable(match), 0)
+        self.assertEqual(self._balance(), 70)
+
+    def test_a_cancelled_match_is_refunded_without_waiting(self):
+        match = self._match_with_a_bet(timedelta(0))
+        Match.objects.filter(pk=match.pk).update(status=Match.Status.CANCELED)
+
+        self.assertEqual(refund_if_unresolvable(match), 1)
+        self.assertEqual(self._balance(), 100)
+
+
+class SettlePassTests(TestCase):
+    """
+    The sync's settle pass, with the feed replaced.
+
+    None of this is about PandaScore being right - it is about the pass
+    surviving PandaScore being wrong. Every case here is a feed failure that
+    used to stop a stake coming back.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="pass@example.com", password="x", username="pass"
+        )
+        self.wallet = Wallet.objects.get(user=self.user)
+        self.wallet.balance = 100
+        self.wallet.save()
+        self.command = SyncCommand()
+
+    def _stranded_match(self, external_id="1"):
+        """A match finished with no winner, long enough ago to be refundable."""
+        match = make_match(
+            start_time=timezone.now() - (UNRESOLVED_GRACE + timedelta(hours=1)),
+            external_id=external_id,
+        )
+        place_bet(self.user, match, match.team_a, 30)
+        Match.objects.filter(pk=match.pk).update(status=Match.Status.FINISHED)
+        return match
+
+    def _balance(self):
+        self.wallet.refresh_from_db()
+        return self.wallet.balance
+
+    def test_a_match_the_feed_has_dropped_is_still_refunded(self):
+        # The regression this pass exists for: the refund used to sit behind
+        # a successful fetch, so a 404 - the clearest possible evidence that
+        # no winner is coming - was the one case that held the stake forever.
+        self._stranded_match()
+        with mock.patch(f"{SYNC}.fetch_match", return_value=None):
+            self.command._settle_open_bets()
+        self.assertEqual(self._balance(), 100)
+
+    def test_a_feed_error_does_not_hold_the_stake(self):
+        self._stranded_match()
+        with mock.patch(
+            f"{SYNC}.fetch_match", side_effect=PandaScoreError("boom", status_code=500)
+        ):
+            self.command._settle_open_bets()
+        self.assertEqual(self._balance(), 100)
+
+    def test_a_match_the_feed_never_knew_about_is_swept_too(self):
+        # No external_id: nothing to ask the feed for, but the clock still
+        # says the stake is unrecoverable.
+        self._stranded_match(external_id=None)
+        with mock.patch(f"{SYNC}.fetch_match") as fetch:
+            self.command._settle_open_bets()
+        fetch.assert_not_called()
+        self.assertEqual(self._balance(), 100)
+
+    def test_one_malformed_payload_does_not_cost_the_others(self):
+        self._stranded_match(external_id="1")
+        self._stranded_match(external_id="2")
+        # Not a dict, so the first attribute access inside the sync raises -
+        # standing in for any shape the feed has no business returning.
+        with mock.patch(f"{SYNC}.fetch_match", return_value=["not", "a", "match"]):
+            self.command._settle_open_bets()
+        self.assertEqual(self._balance(), 100)
+
+    def test_a_rate_limit_stops_the_pass(self):
+        self._stranded_match(external_id="1")
+        self._stranded_match(external_id="2")
+        with mock.patch(
+            f"{SYNC}.fetch_match", side_effect=PandaScoreError("429", status_code=429)
+        ) as fetch:
+            self.command._settle_open_bets()
+        # One request, not one per match - but the match it did reach still
+        # got its refund check before the pass gave up.
+        self.assertEqual(fetch.call_count, 1)
+        self.assertEqual(self._balance(), 70)
+

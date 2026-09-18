@@ -1,19 +1,12 @@
-from datetime import timedelta
-
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.matches.models import Game, Match, Team, Tournament
 from apps.votes.models import Vote
-from apps.votes.betting import refund_active_votes
+from apps.votes.betting import refund_if_unresolvable
 from apps.matches.pandascore import PandaScoreError, fetch_match, fetch_matches
-
-# How long after a match was due to start we keep waiting for the feed to
-# name a winner before giving the stakes back.
-UNRESOLVED_GRACE = timedelta(hours=12)
 
 STATUS_MAP = {
     "not_started": Match.Status.UPCOMING,
@@ -65,57 +58,64 @@ class Command(BaseCommand):
         # here used to strand money - a match written as finished with no
         # winner settles through neither receiver and was then never looked
         # at again. Re-saving an already-settled match is harmless; both
-        # receivers only ever touch votes still ACTIVE.
-        pending = (
-            Match.objects.filter(votes__status=Vote.Status.ACTIVE)
-            .exclude(external_id=None)
-            .distinct()
-        )
+        # receivers only ever touch votes still ACTIVE. Matches with no
+        # external_id (seeded by hand, say) are kept in too: the feed has
+        # nothing to say about them, but the refund sweep below still does.
+        pending = Match.objects.filter(votes__status=Vote.Status.ACTIVE).distinct()
         if not pending:
             return
 
         self.stdout.write(f"Settling {len(pending)} match(es) with open bets...")
         for match in pending:
+            rate_limited = self._resync_from_feed(match)
+            # Runs whatever the feed did - answered, 404ed, errored, or was
+            # never asked. Whether a match has become unresolvable is decided
+            # from local state and a clock, and the commonest way for a match
+            # to become unresolvable is precisely the feed losing it. Leaving
+            # this behind a successful fetch is what stranded stakes before.
             try:
-                raw = fetch_match(match.external_id)
-            except PandaScoreError as e:
-                # One unreachable match must not cost the others their
-                # settlement; a rate limit is the exception, since every
-                # remaining request would just burn against the same wall.
-                self.stderr.write(self.style.ERROR(f"  match {match.external_id}: {e}"))
-                if e.status_code == 429:
-                    return
-                continue
-            if raw is None:
-                self.stdout.write(f"  match {match.external_id}: gone from PandaScore, left as-is")
-                continue
+                refunded = refund_if_unresolvable(match)
+            except Exception as e:  # noqa: BLE001 - one match must not cost the rest
+                self.stderr.write(self.style.ERROR(f"  match {match.pk}: refund check failed: {e}"))
+            else:
+                if refunded:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"  match {match.pk}: unresolvable, refunded {refunded} bet(s)"
+                        )
+                    )
+            if rate_limited:
+                # Every remaining request would just burn against the same
+                # wall; the timer brings us back in ten minutes.
+                return
+
+    def _resync_from_feed(self, match):
+        """
+        Re-read one match from PandaScore and save it, firing settlement.
+
+        Returns True if we were rate limited, meaning the pass should stop.
+        Every other failure is reported and swallowed: one unreachable or
+        malformed match must not cost the others their settlement.
+        """
+        if not match.external_id:
+            return False
+        try:
+            raw = fetch_match(match.external_id)
+        except PandaScoreError as e:
+            self.stderr.write(self.style.ERROR(f"  match {match.external_id}: {e}"))
+            return e.status_code == 429
+
+        if raw is None:
+            self.stdout.write(f"  match {match.external_id}: gone from PandaScore")
+            return False
+        try:
             slug = (raw.get("videogame") or {}).get("slug") or match.tournament.game.slug
             result = self._sync_one(raw, slug)
-            self.stdout.write(f"  match {match.external_id}: {raw.get('status')} -> {result}")
-            self._refund_if_unresolvable(match)
-
-    def _refund_if_unresolvable(self, match):
-        """
-        Give the stake back once it is clear no winner is ever coming.
-
-        A match can finish with no winner the feed will report - a walkover,
-        a forfeit, data the provider never fills in. Neither receiver settles
-        that, so without this the stake would sit open for good. The delay is
-        what keeps a match that is merely finished-before-its-winner-lands
-        from being voided out from under its bettors.
-        """
-        match.refresh_from_db()
-        if match.status != Match.Status.FINISHED or match.winner_id:
-            return
-        if timezone.now() - match.start_time < UNRESOLVED_GRACE:
-            return
-        refunded = refund_active_votes(match)
-        if refunded:
-            self.stdout.write(
-                self.style.WARNING(
-                    f"  match {match.external_id}: finished with no winner, refunded {refunded} bet(s)"
-                )
-            )
+        except Exception as e:  # noqa: BLE001 - a malformed payload is one match's problem
+            self.stderr.write(self.style.ERROR(f"  match {match.external_id}: {e}"))
+            return False
+        self.stdout.write(f"  match {match.external_id}: {raw.get('status')} -> {result}")
+        return False
 
     def _sync_status(self, slug, status, sort):
         try:
