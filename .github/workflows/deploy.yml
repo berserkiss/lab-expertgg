@@ -5,8 +5,10 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
-      # Changing the pipeline should exercise the pipeline.
+      # Changing the pipeline, or the script it runs on the droplet, should
+      # exercise the pipeline.
       - '.github/workflows/deploy.yml'
+      - 'deploy/remote-deploy.sh'
   workflow_dispatch: {}
 
 jobs:
@@ -48,6 +50,11 @@ jobs:
       - name: Install dependencies
         working-directory: backend
         run: pip install -q -r requirements.txt
+      - name: Check for missing migrations
+        working-directory: backend
+        # A model change pushed without its migration passes the suite and
+        # then fails on the droplet, half-way through a deploy.
+        run: python manage.py makemigrations --check --dry-run
       - name: Run tests
         working-directory: backend
         run: python manage.py test --verbosity 2
@@ -65,4 +72,9 @@ jobs:
           echo "$DEPLOY_SSH_KEY" | tr -d '\r' | ssh-add -
           mkdir -p ~/.ssh
           ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
-          ssh root@$DEPLOY_HOST "cd /root/lab-expertgg && git fetch origin main && git reset --hard origin/main && cd backend && source venv/bin/activate && pip install -q -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput && systemctl restart expertgg && systemctl is-active expertgg"
+          # flock, not a provider-level concurrency group: `git push origin
+          # main` reaches GitLab and GitHub at once by configuration, so the
+          # two racers are in different providers and only the droplet can
+          # serialise them. Without it both pipelines git-reset and migrate
+          # the same directory simultaneously.
+          ssh root@$DEPLOY_HOST "flock -w 600 /var/lock/expertgg.deploy -c 'cd /root/lab-expertgg && git fetch origin main && git reset --hard origin/main && bash deploy/remote-deploy.sh'"

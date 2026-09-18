@@ -25,10 +25,14 @@ test_backend:
     - changes:
         - backend/**/*
         - .gitlab-ci.yml
+        - deploy/remote-deploy.sh
   before_script:
     - cd backend
     - pip install -q -r requirements.txt
   script:
+    # See the GitHub workflow: a missing migration passes the suite and
+    # fails on the droplet instead.
+    - python manage.py makemigrations --check --dry-run
     - python manage.py test --verbosity 2
 
 deploy_backend:
@@ -38,6 +42,7 @@ deploy_backend:
     - if: '$CI_COMMIT_BRANCH == "main"'
       changes:
         - backend/**/*
+        - deploy/remote-deploy.sh
   before_script:
     - apk add --no-cache openssh-client
     - eval $(ssh-agent -s)
@@ -45,4 +50,6 @@ deploy_backend:
     - mkdir -p ~/.ssh
     - ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
   script:
-    - ssh root@$DEPLOY_HOST "cd /root/lab-expertgg && git fetch origin main && git reset --hard origin/main && cd backend && source venv/bin/activate && pip install -q -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput && systemctl restart expertgg && systemctl is-active expertgg"
+    # See the GitHub workflow: the lock lives on the droplet because the
+    # two pipelines race across providers, where no `resource_group:` reaches.
+    - ssh root@$DEPLOY_HOST "flock -w 600 /var/lock/expertgg.deploy -c 'cd /root/lab-expertgg && git fetch origin main && git reset --hard origin/main && bash deploy/remote-deploy.sh'"

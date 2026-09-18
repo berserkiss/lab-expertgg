@@ -481,3 +481,133 @@ instant, and Postgres may order ties differently per query — so page two
 repeated rows from page one and skipped others entirely. Each list now
 carries `id` as a tiebreak. Ordering is part of pagination being correct,
 not a display preference.
+
+## Corrections found by re-checking the earlier ones
+
+An architecture review produced a list of judgments about this codebase;
+twenty of them were never adversarially checked, and several described code
+that had since been rewritten. Re-running the check against the current code
+— including one pass that audited the repairs themselves without being shown
+what they were meant to fix — found three of those repairs incomplete. They
+are written up here because "fixed" claimed too early is worse than an open
+defect: nobody looks at it again.
+
+### A refund that only happened when the feed answered
+
+The settle pass was changed so a match finished with no winner has its
+stakes returned after a grace period. The check was placed after the
+PandaScore fetch, and every failure path above it did `continue` — so the
+one case that most clearly means *no winner is ever coming*, the feed
+returning 404 for a match it has dropped, was exactly the case that never
+reached the refund. A feed error skipped it too. So did a match with no
+`external_id`, which the query excluded outright.
+
+Whether a match has become unresolvable is decided from local state and a
+clock. It does not need the feed, and depending on the feed is precisely
+wrong, because the commonest way for a match to become unresolvable is the
+feed losing it. The policy now lives in `betting.refund_if_unresolvable()`,
+next to the operation it governs rather than in the command, and the command
+calls it for every match holding an open bet — after a successful sync,
+after a 404, after an error, and for matches the feed has never heard of.
+
+It covers three shapes:
+
+| state | waits | why |
+| --- | --- | --- |
+| cancelled | not at all | terminal, and there is nothing to wait for |
+| finished, no winner | 12h | a hole in one field; it will not fill itself |
+| never resolved (still upcoming/live) | 36h | a fixture running long is not an abandoned one |
+
+The function locks and re-reads the match row inside the transaction that
+performs the refund. Reading "no winner" outside it can void a match whose
+winner lands in the same instant: settlement runs inside the sync's own
+atomic block, so taking the row lock is what makes the two orderings
+mutually exclusive rather than merely unlikely to collide. Refunding a match
+that turns out to have been playable is the survivable error — the bettor
+gets their stake back rather than losing it — which is why the graces are
+generous but finite.
+
+The work after the fetch is now inside the per-match `try` as well. It was
+not, so a single malformed payload aborted the settlement of every match
+after it — the same failure shape the error isolation was added to remove.
+
+### The payout rule reached the client, and the client ignored it
+
+`payout_multiplier` and `payout_bonus` are sent on every match so no screen
+has to hardcode what a win pays. The Vote button rendered
+`win {payout_bonus}gg + bonus`: the flat bonus printed as if it were the
+winnings, with the multiplier and the stake both ignored. The value
+travelled; nothing read it. It now quotes the server's rule against the
+stake actually typed.
+
+The test that was supposed to protect this asserted
+`payout_for(10) == 10 * WIN_MULTIPLIER + WIN_BONUS` — a restatement of the
+function's own body, true for any constants, touching neither the serializer
+nor the API. It has been replaced by one that reads `payout_multiplier` and
+`payout_bonus` out of an HTTP response, places a bet through the API,
+finishes the match, and asserts the wallet was credited what the response
+promised. A test that cannot fail is worse than no test: it occupies the
+space where the real one would go.
+
+### Pagination raced, because the guard was checked at the wrong moment
+
+`useFetchList` refused to run a poll tick once the user had paged further.
+The flag was set when a `loadMore` *resolved*, and read when a poll tick
+*started* — so nothing was protected in between, which is the entire window
+where it goes wrong. A poll that started before the user reached the end
+could land after page two arrived, replace the list with page one and set
+the cursor back to page two. Pull-to-refresh was worse: it reset the flag
+without abandoning the in-flight `loadMore`, leaving the list as page one
+followed by page four, with two and three silently skipped and no duplicate
+key to give it away.
+
+Responses do not arrive in the order they were asked for, and no flag read
+at call time can see that. Every request now records a generation; a
+response from an older one is dropped, `reload()` bumps the generation and
+resets the paging state before it fetches, and the poll re-checks on arrival
+as well as at the start. `BookScreen` — the one paginated list still taking
+`results` and discarding `next` — pages like the others now.
+
+### Deploys serialise on the droplet, and back up before migrating
+
+`git push origin main` reaches GitLab and GitHub at once; that is how the
+remote is configured. Both pipelines then `git reset --hard` and
+`migrate --noinput` the same directory on the same box, within seconds of
+each other. A provider-level concurrency group cannot help, because the two
+racers are in different providers — the only place they meet is the droplet,
+so the lock lives there: `flock` around the whole chain, waiting up to ten
+minutes and then failing loudly.
+
+The chain itself was written out in full in both pipeline files — two copies
+of a command that migrates a money ledger, free to drift. It is now
+`deploy/remote-deploy.sh`, run by both, and it takes a `pg_dump` into
+`/root/backups` before migrating. The dump is not advisory: `set -e` means a
+deploy whose backup failed does not migrate. Thirty are kept. CI also runs
+`makemigrations --check --dry-run`, so a model change pushed without its
+migration fails in CI rather than half-way through a deploy.
+
+### Still open, and named rather than quietly carried
+
+- **gg is not conserved.** `credit()` mints with no counterparty, a win pays
+  `stake * 2 + 2` against even odds — so betting has positive expected value
+  and no vig — and the ad faucet is 250 gg a minute with no daily cap. Since
+  the signup bonus is 0, the faucet is now the *only* source of gg in the
+  system, which makes the leaderboard a ranking of faucet claims. Either the
+  payout becomes fair (bonus 0) or the faucet gets a cap; ranking on realised
+  profit rather than raw balance would fix the board alone.
+- **`reconcile_wallets` treats the balance as truth and patches the ledger to
+  match.** It reports drift before it books anything, so it does detect, but
+  applying it destroys the evidence. The drift source it exists for — an
+  admin editing `Wallet.balance` directly, which writes no transaction —
+  would be better removed than reconciled.
+- **The droplet cannot be rebuilt from this repository.** CI restarts an
+  `expertgg` unit that is not in it; there is no nginx site, no TLS issuance,
+  no Postgres role or database creation, no venv bootstrap.
+- **The release APK compiles in the droplet's IP address** wearing an
+  `sslip.io` hostname, with no build variant or env injection — and the
+  signing keystore is gitignored and stored nowhere else, so a rebuilt server
+  strands every installed copy and there is no key to ship an update with.
+- **`refreshAccessToken` cannot tell an expired session from a dropped
+  connection** and resolves both by deleting the refresh token. Every deploy
+  ends in `systemctl restart expertgg`, which is exactly such a window, so
+  this logs people out routinely rather than theoretically.
