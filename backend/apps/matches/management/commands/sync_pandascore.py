@@ -1,11 +1,19 @@
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.matches.models import Game, Match, Team, Tournament
 from apps.votes.models import Vote
+from apps.votes.signals import refund_active_votes
 from apps.matches.pandascore import PandaScoreError, fetch_match, fetch_matches
+
+# How long after a match was due to start we keep waiting for the feed to
+# name a winner before giving the stakes back.
+UNRESOLVED_GRACE = timedelta(hours=12)
 
 STATUS_MAP = {
     "not_started": Match.Status.UPCOMING,
@@ -52,9 +60,14 @@ class Command(BaseCommand):
         sync runs. These are asked for by id instead, which is cheap: it is
         one request per match that actually has money on it.
         """
+        # No status filter: a match holding an ACTIVE vote is by definition
+        # unsettled, whatever its local status claims. Excluding FINISHED
+        # here used to strand money - a match written as finished with no
+        # winner settles through neither receiver and was then never looked
+        # at again. Re-saving an already-settled match is harmless; both
+        # receivers only ever touch votes still ACTIVE.
         pending = (
             Match.objects.filter(votes__status=Vote.Status.ACTIVE)
-            .exclude(status__in=[Match.Status.FINISHED, Match.Status.CANCELED])
             .exclude(external_id=None)
             .distinct()
         )
@@ -74,6 +87,30 @@ class Command(BaseCommand):
             slug = (raw.get("videogame") or {}).get("slug") or match.tournament.game.slug
             result = self._sync_one(raw, slug)
             self.stdout.write(f"  match {match.external_id}: {raw.get('status')} -> {result}")
+            self._refund_if_unresolvable(match)
+
+    def _refund_if_unresolvable(self, match):
+        """
+        Give the stake back once it is clear no winner is ever coming.
+
+        A match can finish with no winner the feed will report - a walkover,
+        a forfeit, data the provider never fills in. Neither receiver settles
+        that, so without this the stake would sit open for good. The delay is
+        what keeps a match that is merely finished-before-its-winner-lands
+        from being voided out from under its bettors.
+        """
+        match.refresh_from_db()
+        if match.status != Match.Status.FINISHED or match.winner_id:
+            return
+        if timezone.now() - match.start_time < UNRESOLVED_GRACE:
+            return
+        refunded = refund_active_votes(match)
+        if refunded:
+            self.stdout.write(
+                self.style.WARNING(
+                    f"  match {match.external_id}: finished with no winner, refunded {refunded} bet(s)"
+                )
+            )
 
     def _sync_status(self, slug, status, sort):
         try:

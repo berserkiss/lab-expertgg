@@ -360,6 +360,15 @@ that still carries an active vote and is not yet finished is fetched from
 PandaScore **by id** and re-synced. That is one request per match with
 money on it, so it stays cheap.
 
+A match can also finish with no winner the feed will ever name — a
+walkover, a forfeit, data the provider never fills in. Neither receiver
+settles that, so the settle pass revisits **every** match still holding an
+active vote regardless of its local status (a match with an open bet is
+unsettled by definition), and once such a match is more than 12 hours past
+its start it is refunded outright. `refund_active_votes()` is a named
+callable for exactly this reason: a refund has to be invocable, not only
+reachable by saving a Match.
+
 A voided match refunds. `canceled` maps to `Match.Status.CANCELED`, a
 terminal status with no winner, and saving a match into it fires
 `void_votes_on_match_canceled`: every active vote on it goes to
