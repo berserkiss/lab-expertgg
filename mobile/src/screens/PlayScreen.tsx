@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
   FlatList,
-  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BalanceBadge from '../components/BalanceBadge';
 import ConfirmationModal from '../components/ConfirmationModal';
+import TeamBox, { VS_COLUMN_WIDTH } from '../components/TeamBox';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
@@ -23,7 +23,6 @@ import { typography } from '../theme/typography';
 import { fetchMatches, Match, placeVote, Team } from '../api/matches';
 import { formatCountdown } from '../utils/countdown';
 import ClockIcon from '../assets/clock.svg';
-import SwordsIcon from '../assets/swords.svg';
 import DeleteIcon from '../assets/delete.svg';
 
 // Two rows of six, with "00" taking the width of two keys - matches the
@@ -112,13 +111,6 @@ export default function PlayScreen({ navigation }: any) {
     }
   };
 
-  const renderTeamIcon = (team: Team) =>
-    team.logo ? (
-      <Image source={{ uri: team.logo }} style={styles.teamIcon} />
-    ) : (
-      <SwordsIcon width={18} height={18} color={colors.text} />
-    );
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -167,29 +159,18 @@ export default function PlayScreen({ navigation }: any) {
                 </View>
 
                 <View style={styles.teamsRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.teamButton,
-                      isExpanded && selectedTeam?.id === item.team_a.id && styles.teamButtonActive,
-                    ]}
-                    onPress={() => expand(item, item.team_a)}>
-                    <Text style={styles.teamName} numberOfLines={1} ellipsizeMode="tail">
-                      {item.team_a.name}
-                    </Text>
-                    {renderTeamIcon(item.team_a)}
-                  </TouchableOpacity>
+                  <TeamBox
+                    team={item.team_a}
+                    highlighted={isExpanded && selectedTeam?.id === item.team_a.id}
+                    onPress={() => expand(item, item.team_a)}
+                  />
                   <Text style={styles.vs}>VS</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.teamButton,
-                      isExpanded && selectedTeam?.id === item.team_b.id && styles.teamButtonActive,
-                    ]}
-                    onPress={() => expand(item, item.team_b)}>
-                    {renderTeamIcon(item.team_b)}
-                    <Text style={styles.teamName} numberOfLines={1} ellipsizeMode="tail">
-                      {item.team_b.name}
-                    </Text>
-                  </TouchableOpacity>
+                  <TeamBox
+                    team={item.team_b}
+                    iconFirst
+                    highlighted={isExpanded && selectedTeam?.id === item.team_b.id}
+                    onPress={() => expand(item, item.team_b)}
+                  />
                 </View>
 
                 {isExpanded ? (
@@ -298,24 +279,13 @@ const styles = StyleSheet.create({
   },
   bookBadgeText: { color: colors.text, fontSize: typography.small.fontSize, fontFamily: fonts.semiBold },
   teamsRow: { flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-between', marginBottom: 8, gap: 8 },
-  teamButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.teamButtonBg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.teamButtonBorder,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    minHeight: 56,
+  vs: {
+    width: VS_COLUMN_WIDTH,
+    textAlign: 'center',
+    color: colors.text,
+    fontFamily: fonts.medium,
+    fontSize: typography.h4.fontSize,
   },
-  teamButtonActive: { borderColor: colors.primary },
-  teamIcon: { width: 18, height: 18, borderRadius: 9 },
-  teamName: { color: colors.text, fontSize: typography.small.fontSize, fontFamily: fonts.regular, flexShrink: 1, textAlign: 'center' },
-  vs: { color: colors.text, fontFamily: fonts.medium, fontSize: typography.h4.fontSize },
   divider: { height: 1, backgroundColor: colors.border, marginBottom: 12 },
   winsText: {
     color: colors.text,

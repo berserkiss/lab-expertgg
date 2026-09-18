@@ -328,3 +328,16 @@ A history row is not a text list — it mirrors the Play card:
   result as an outlined badge in the status colour on the right. A settled
   bet shows a sign (`+ 100 gg` / `- 70 gg`); one still running shows the
   stake at risk with no sign (`20 gg`).
+
+### One match box, both screens
+
+Play and History render the same match, so the team box is a single
+component (`components/TeamBox.tsx`) owning its own measurements — 56pt
+min height, 12/8 padding, 8pt radius, 6pt icon gap, 12pt regular name —
+rather than a set of numbers copied into each screen and drifting apart.
+
+The row around it is also identical on both: a card of 16pt padding inside
+a list of 16pt padding, and `[box flex:1][28pt][box flex:1]`. Play draws
+"VS" in that 28pt middle column; History leaves it empty. Fixing the
+column's width rather than letting "VS" measure itself is what keeps the
+boxes the same width on a screen that draws no VS.

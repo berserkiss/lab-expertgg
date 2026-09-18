@@ -1,8 +1,7 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { Team } from '../api/matches';
+import { StyleSheet, Text, View } from 'react-native';
 import { VoteHistoryItem } from '../api/votes';
-import SwordsIcon from '../assets/swords.svg';
+import TeamBox, { VS_COLUMN_WIDTH } from './TeamBox';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
@@ -28,23 +27,7 @@ function formatAmount(amount: number, status: string) {
 export default function BetCard({ item }: { item: VoteHistoryItem }) {
   const statusColor = STATUS_COLOR[item.status];
 
-  const renderTeam = (team: Team, iconFirst: boolean) => {
-    const picked = team.id === item.predicted_team.id;
-    const icon = team.logo ? (
-      <Image source={{ uri: team.logo }} style={styles.teamIcon} />
-    ) : (
-      <SwordsIcon width={18} height={18} color={colors.text} />
-    );
-    return (
-      <View style={[styles.teamBox, picked && styles.teamBoxPicked]}>
-        {iconFirst && icon}
-        <Text style={styles.teamName} numberOfLines={1} ellipsizeMode="tail">
-          {team.name}
-        </Text>
-        {!iconFirst && icon}
-      </View>
-    );
-  };
+  const backed = (teamId: number) => teamId === item.predicted_team.id;
 
   return (
     <View style={styles.card}>
@@ -58,8 +41,9 @@ export default function BetCard({ item }: { item: VoteHistoryItem }) {
       </View>
 
       <View style={styles.teamsRow}>
-        {renderTeam(item.match.team_a, false)}
-        {renderTeam(item.match.team_b, true)}
+        <TeamBox team={item.match.team_a} highlighted={backed(item.match.team_a.id)} />
+        <View style={styles.vsColumn} />
+        <TeamBox team={item.match.team_b} iconFirst highlighted={backed(item.match.team_b.id)} />
       </View>
 
       <View style={styles.row}>
@@ -78,7 +62,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.navBackground,
     borderRadius: 12,
-    padding: 12,
+    padding: 16,
     marginBottom: 12,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
@@ -90,30 +74,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     flexShrink: 1,
   },
-  teamsRow: { flexDirection: 'row', gap: 8, marginVertical: 12 },
-  // Same outlined treatment as the Play screen's team buttons, with the blue
-  // border marking the team this bet was placed on.
-  teamBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.teamButtonBg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.teamButtonBorder,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    minHeight: 48,
-  },
-  teamBoxPicked: { borderColor: colors.primary },
-  teamIcon: { width: 18, height: 18, borderRadius: 9 },
-  teamName: {
-    color: colors.text,
-    fontSize: typography.small.fontSize,
-    fontFamily: fonts.regular,
-    flexShrink: 1,
-    textAlign: 'center',
-  },
+  teamsRow: { flexDirection: 'row', alignItems: 'stretch', gap: 8, marginVertical: 12 },
+  // Stands in for Play's "VS" so both screens size their boxes the same.
+  vsColumn: { width: VS_COLUMN_WIDTH },
 });
