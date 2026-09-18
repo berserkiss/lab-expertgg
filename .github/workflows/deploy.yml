@@ -30,6 +30,10 @@ jobs:
           --health-retries 5
     env:
       SECRET_KEY: ci-secret-not-used-anywhere-else
+      # The test client speaks plain HTTP with no proxy terminating TLS, so
+      # the production HTTPS redirect has to be off or every request under
+      # test answers 301 instead of doing anything.
+      FORCE_HTTPS: 'False'
       DB_HOST: localhost
       DB_NAME: lab_expertgg
       DB_USER: lab_expertgg
