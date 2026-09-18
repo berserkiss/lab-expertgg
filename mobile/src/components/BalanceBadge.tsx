@@ -40,12 +40,13 @@ export default function BalanceBadge() {
       style={styles.container}
       onPress={() => navigation.navigate('GetCoins')}>
       <Text style={styles.balance}>{user?.balance ?? 0} gg</Text>
-      <WalletIcon width={25} height={24} />
+      {/* The asset's own 35x34 - the frame draws it at full size. */}
+      <WalletIcon width={35} height={34} />
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  balance: { color: colors.text, fontFamily: fonts.semiBold, fontSize: typography.label.fontSize },
+  balance: { color: colors.text, fontFamily: fonts.medium, fontSize: typography.label.fontSize },
 });
