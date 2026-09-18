@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      # Changing the pipeline should exercise the pipeline.
+      - '.github/workflows/deploy.yml'
   workflow_dispatch: {}
 
 jobs:
