@@ -687,3 +687,37 @@ that fails for three hours every evening and passes the rest of the time,
 which is the most expensive kind of test there is - one that teaches people
 to re-run the job instead of reading it.
 
+### The mobile suite, and a pipeline that opens it
+
+Fifteen tests now, in three files, and a job in each pipeline that runs
+`tsc --noEmit`, `eslint` and `jest`. The job came first on purpose: the
+tests before it were in the same position as the backend test that sat red
+for weeks and the scaffold test that never loaded at all - written, passing
+locally, and read by nothing.
+
+On GitHub they live in their own workflow rather than a job in the deploy
+one, because path filters there are per-workflow: a mobile-only change would
+otherwise trigger a backend deploy, restarting production to ship something
+that never reaches it. GitLab's rules are per-job, so one file is enough
+there.
+
+What the tests are for:
+
+- **`useFetchList`** - the two orderings that went wrong. A poll tick that
+  started before `loadMore` and landed after it used to replace the list
+  with page one and rewind the cursor; a pull-to-refresh over an in-flight
+  `loadMore` left page one followed by page four with nothing between them.
+  Both were silent - no duplicate key, no error - and both were found by
+  reading rather than by anything failing. The tests drive the resolutions
+  by hand, and both fail against the revision before the fix.
+- **`client`** - the four outcomes of a token refresh, so "the connection
+  dropped" can never again be read as "the session is over".
+- **`BetCard`** - the four states of a history row. A void bet tinted like a
+  loss, or a refund shown as `- 30 gg` when the money came back, are the
+  kind of wrong nothing type-checks.
+
+Lint found two pieces of dead code on its first run - an unused import and a
+piece of state written but never read - which are now gone. The two
+remaining warnings are React Navigation's documented pattern for tab labels
+and icons, so they stay warnings.
+

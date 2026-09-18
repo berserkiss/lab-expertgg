@@ -1,0 +1,42 @@
+name: Mobile checks
+
+# Its own workflow rather than a job in the deploy one: GitHub's path filters
+# are per-workflow, so a mobile-only change would otherwise trigger a backend
+# deploy that has nothing to do with it - restarting production to ship a
+# change that never reaches it.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+  workflow_dispatch: {}
+
+jobs:
+  # Nothing ran the app's own checks before this - not the type checker, not
+  # eslint, not jest. The tests added alongside it would have met the failure
+  # this project has already been bitten by twice: a suite that sits red for
+  # weeks because no pipeline ever opens it.
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npx eslint .
+      - name: Test
+        run: npx jest --ci

@@ -26,7 +26,6 @@ function formatSeconds(total: number) {
 export default function GetCoinsScreen({ navigation }: any) {
   const { refreshUser } = useAuth();
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
-  const [reward, setReward] = useState<number | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [claimedReward, setClaimedReward] = useState<number | null>(null);
 
@@ -34,7 +33,6 @@ export default function GetCoinsScreen({ navigation }: any) {
     try {
       const status = await fetchAdRewardStatus();
       setSecondsRemaining(status.available ? 0 : status.seconds_remaining);
-      setReward(status.reward);
     } catch {
       // Leave the button in its last known state - not worth a full error
       // screen for a secondary "free coins" feature.

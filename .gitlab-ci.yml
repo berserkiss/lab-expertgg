@@ -79,6 +79,23 @@ api_tests:
     reports:
       junit: newman-report.xml
 
+# The app's own checks. It deploys nothing, so it does not gate `deploy` -
+# but a red job here is still a red pipeline, which is the point.
+mobile:
+  stage: test
+  image: node:20
+  rules:
+    - changes:
+        - mobile/**/*
+        - .gitlab-ci.yml
+  before_script:
+    - cd mobile
+    - npm ci
+  script:
+    - npx tsc --noEmit
+    - npx eslint .
+    - npx jest --ci
+
 deploy_backend:
   stage: deploy
   image: alpine:latest
