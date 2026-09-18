@@ -1,27 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BetCard from '../components/BetCard';
 import ErrorState from '../components/ErrorState';
+import ListFooter from '../components/ListFooter';
 import { fetchMatchBets } from '../api/matches';
-import { VoteHistoryItem } from '../api/votes';
+import { useFetchList } from '../hooks/useFetchList';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
 
 export default function BookScreen({ route, navigation }: any) {
   const { matchId } = route.params;
-  const [bets, setBets] = useState<VoteHistoryItem[]>([]);
-  const [error, setError] = useState(false);
-
-  const load = () => {
-    setError(false);
-    fetchMatchBets(matchId)
-      .then(setBets)
-      .catch(() => setError(true));
-  };
-
-  useEffect(load, [matchId]);
+  const { items, error, loadingMore, reload, loadMore } = useFetchList(pageUrl =>
+    fetchMatchBets(matchId, pageUrl),
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -32,13 +25,16 @@ export default function BookScreen({ route, navigation }: any) {
         <Text style={styles.title}>Book</Text>
       </View>
       {error ? (
-        <ErrorState onRetry={load} />
+        <ErrorState onRetry={reload} />
       ) : (
         <FlatList
-          data={bets}
+          data={items}
           keyExtractor={b => String(b.id)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => <BetCard item={item} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={<ListFooter loading={loadingMore} />}
         />
       )}
     </SafeAreaView>

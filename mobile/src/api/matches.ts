@@ -65,7 +65,11 @@ export async function placeVote(
   return data;
 }
 
-export async function fetchMatchBets(matchId: number) {
-  const { data } = await apiClient.get<Paginated<VoteHistoryItem>>(`/matches/${matchId}/bets/`);
-  return data.results;
+// Paginated like the other lists, so the whole page is returned and the
+// caller keeps `next` - a popular match's book runs well past one page.
+export async function fetchMatchBets(matchId: number, pageUrl?: string) {
+  const { data } = await apiClient.get<Paginated<VoteHistoryItem>>(
+    pageUrl ?? `/matches/${matchId}/bets/`,
+  );
+  return data;
 }

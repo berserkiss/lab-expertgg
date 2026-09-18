@@ -239,7 +239,14 @@ export default function PlayScreen({ navigation }: any) {
                         onPress={() => handleVote(item)}
                         disabled={submitting || !selectedTeam || !!validationError}>
                         <Text style={styles.voteTitle}>Vote</Text>
-                        <Text style={styles.voteSubtitle}>win {item.payout_bonus}gg + bonus</Text>
+                        {/* Quotes the server's own rule (payout_multiplier,
+                            payout_bonus on the match) against the stake the
+                            user typed, so the button can never promise a
+                            number settlement will not pay. The frame's "+
+                            bonus" is that flat payout_bonus. */}
+                        <Text style={styles.voteSubtitle}>
+                          win {stakeNumber * item.payout_multiplier}gg + bonus
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </>

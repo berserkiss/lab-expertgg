@@ -38,29 +38,51 @@ export function useFetchList<T>(
   // Tracks whether the user has paged past the first screenful, so a poll
   // tick doesn't yank rows out from under them (see silentReload).
   const pagedFurther = useRef(false);
+  // Every request records the generation it started in, and a response from
+  // an older one is dropped. Responses do not arrive in the order they were
+  // asked for: a poll tick that started before a loadMore can land after it
+  // and overwrite the appended pages, and a pull-to-refresh during loadMore
+  // would otherwise leave the list as page one followed by page four, with
+  // two and three silently skipped. A flag checked only at call time cannot
+  // see either, because both go wrong between the call and the resolution.
+  const generation = useRef(0);
 
   const reload = useCallback(() => {
+    // Starting a reload abandons everything in flight: the paging state is
+    // reset here rather than in the .then, so a loadMore cannot be started
+    // against the old cursor while the first page is on its way back.
+    const gen = ++generation.current;
+    nextUrl.current = null;
+    pagedFurther.current = false;
+    fetchingMore.current = false;
+    setLoadingMore(false);
     setLoading(true);
     return fetcherRef
       .current()
       .then(page => {
+        if (gen !== generation.current) return;
         setItems(page.results);
         nextUrl.current = page.next;
-        pagedFurther.current = false;
         setError(false);
       })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+      .catch(() => {
+        if (gen === generation.current) setError(true);
+      })
+      .finally(() => {
+        if (gen === generation.current) setLoading(false);
+      });
   }, []);
 
   const loadMore = useCallback(() => {
     const url = nextUrl.current;
     if (!url || fetchingMore.current) return;
+    const gen = generation.current;
     fetchingMore.current = true;
     setLoadingMore(true);
     fetcherRef
       .current(url)
       .then(page => {
+        if (gen !== generation.current) return;
         setItems(prev => [...prev, ...page.results]);
         nextUrl.current = page.next;
         pagedFurther.current = true;
@@ -70,6 +92,8 @@ export function useFetchList<T>(
         // end retries.
       })
       .finally(() => {
+        // A superseded request must not clear the flags a newer one set.
+        if (gen !== generation.current) return;
         fetchingMore.current = false;
         setLoadingMore(false);
       });
@@ -81,9 +105,15 @@ export function useFetchList<T>(
   // with page one would throw away what they scrolled to.
   const silentReload = useCallback(() => {
     if (pagedFurther.current) return Promise.resolve();
+    const gen = generation.current;
     return fetcherRef
       .current()
       .then(page => {
+        // Re-checked on arrival, not only at call time: the user can reach
+        // the end of the list and load page two while this tick is still in
+        // flight, and applying page one then would drop those rows and set
+        // the cursor back to page two, which the next scroll re-fetches.
+        if (gen !== generation.current || pagedFurther.current) return;
         setItems(page.results);
         nextUrl.current = page.next;
         setError(false);
