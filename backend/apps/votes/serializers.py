@@ -1,62 +1,30 @@
-from django.db import transaction
 from rest_framework import serializers
 
-from apps.matches.models import Match
 from apps.matches.serializers import MatchSerializer, TeamSerializer
-from apps.wallet.models import CoinTransaction, InsufficientBalance, Wallet
+from apps.wallet.models import Wallet
 
+from .betting import BettingError, place_bet
 from .models import Vote
 
 
 class VoteCreateSerializer(serializers.ModelSerializer):
+    """HTTP adapter over betting.place_bet - the rules themselves live there."""
+
     class Meta:
         model = Vote
         fields = ("id", "predicted_team", "stake", "status", "created_at")
         read_only_fields = ("id", "status", "created_at")
 
-    def validate(self, attrs):
-        match: Match = self.context["match"]
-        team = attrs["predicted_team"]
-        stake = attrs["stake"]
-
-        if stake < 1:
-            raise serializers.ValidationError({"stake": "Stake must be at least 1 gg."})
-        # Betting is allowed on upcoming AND live matches (not finished) -
-        # status is the source of truth here, not start_time, since a live
-        # match's start_time is necessarily already in the past.
-        if match.status not in (Match.Status.UPCOMING, Match.Status.LIVE):
-            raise serializers.ValidationError("Betting is closed for this match.")
-        if team.id not in (match.team_a_id, match.team_b_id):
-            raise serializers.ValidationError({"predicted_team": "This team is not playing in this match."})
-
-        # Fast, unlocked pre-check for a quick error message. This is NOT the
-        # authoritative check - create() re-checks under a row lock, since two
-        # concurrent bets could otherwise both pass this check against the
-        # same stale balance and overdraw the wallet.
-        wallet = self.context["request"].user.wallet
-        if stake > wallet.balance:
-            raise serializers.ValidationError({"stake": "Not enough gg balance."})
-
-        return attrs
-
     def create(self, validated_data):
-        user = self.context["request"].user
-        match = self.context["match"]
-        stake = validated_data["stake"]
-
-        with transaction.atomic():
-            wallet = Wallet.objects.select_for_update().get(user=user)
-            try:
-                wallet.debit(stake, CoinTransaction.Type.BET_STAKE)
-            except InsufficientBalance:
-                raise serializers.ValidationError({"stake": "Not enough gg balance."})
-            vote = Vote.objects.create(
-                user=user,
-                match=match,
-                predicted_team=validated_data["predicted_team"],
-                stake=stake,
+        try:
+            return place_bet(
+                user=self.context["request"].user,
+                match=self.context["match"],
+                team=validated_data["predicted_team"],
+                stake=validated_data["stake"],
             )
-        return vote
+        except BettingError as e:
+            raise serializers.ValidationError({e.field: e.message} if e.field else e.message)
 
 
 class VoteHistorySerializer(serializers.ModelSerializer):

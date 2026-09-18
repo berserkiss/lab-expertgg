@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.test import TransactionTestCase
+from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -11,6 +11,8 @@ from rest_framework.test import APIClient, APITestCase
 from apps.matches.models import Game, Match, Team, Tournament
 from apps.wallet.models import Wallet
 
+from .betting import (BettingError, WIN_BONUS, WIN_MULTIPLIER, payout_for,
+                      place_bet, refund_active_votes, settle_match)
 from .models import Vote
 
 User = get_user_model()
@@ -72,9 +74,16 @@ class VoteCreateTests(APITestCase):
         response = self.client.post(self.vote_url(), {"predicted_team": self.match.team_a_id, "stake": 10})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_cannot_bet_after_match_started(self):
+    def test_can_bet_on_a_live_match(self):
+        # Betting stays open once a match is under way - status decides, not
+        # start_time, which a live match has necessarily already passed.
         started = make_match(start_time=timezone.now() - timedelta(minutes=1), status=Match.Status.LIVE)
         response = self.client.post(self.vote_url(started), {"predicted_team": started.team_a_id, "stake": 10})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_cannot_bet_on_canceled_match(self):
+        canceled = make_match(status=Match.Status.CANCELED)
+        response = self.client.post(self.vote_url(canceled), {"predicted_team": canceled.team_a_id, "stake": 10})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
@@ -163,3 +172,49 @@ class ConcurrentBetTests(TransactionTestCase):
         self.assertEqual(sorted(results), [201, 400])
         self.wallet.refresh_from_db()
         self.assertEqual(self.wallet.balance, 40)
+
+
+class BettingOperationTests(TestCase):
+    """The lifecycle is callable without HTTP - that is the point of betting.py."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(email="ops@example.com", password="x", username="ops")
+        self.wallet = Wallet.objects.get(user=self.user)
+        self.wallet.balance = 100
+        self.wallet.save()
+        self.match = make_match()
+
+    def test_place_bet_needs_no_request(self):
+        vote = place_bet(self.user, self.match, self.match.team_a, 30)
+        self.wallet.refresh_from_db()
+        self.assertEqual(vote.status, Vote.Status.ACTIVE)
+        self.assertEqual(self.wallet.balance, 70)
+
+    def test_place_bet_refuses_more_than_the_balance(self):
+        with self.assertRaises(BettingError) as caught:
+            place_bet(self.user, self.match, self.match.team_a, 500)
+        self.assertEqual(caught.exception.field, "stake")
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 100)
+
+    def test_settling_twice_pays_once(self):
+        place_bet(self.user, self.match, self.match.team_a, 30)
+        self.match.status = Match.Status.FINISHED
+        self.match.winner = self.match.team_a
+        self.match.save()
+        self.wallet.refresh_from_db()
+        paid = self.wallet.balance
+
+        self.assertEqual(settle_match(self.match), 0)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, paid)
+
+    def test_refunding_twice_returns_the_stake_once(self):
+        place_bet(self.user, self.match, self.match.team_a, 30)
+        self.assertEqual(refund_active_votes(self.match), 1)
+        self.assertEqual(refund_active_votes(self.match), 0)
+        self.wallet.refresh_from_db()
+        self.assertEqual(self.wallet.balance, 100)
+
+    def test_payout_is_defined_in_one_place(self):
+        self.assertEqual(payout_for(10), 10 * WIN_MULTIPLIER + WIN_BONUS)

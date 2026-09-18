@@ -12,16 +12,54 @@ PANDASCORE_BASE_URL = "https://api.pandascore.co"
 
 
 class PandaScoreError(Exception):
-    pass
+    """Any failure talking to PandaScore. `status_code` is set when there was a response."""
+
+    def __init__(self, message, status_code=None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
-def _headers():
+def _get(url, params=None):
+    """
+    One request, with every failure mode arriving as PandaScoreError.
+
+    Callers settle money after the feed loops, so an uncaught
+    requests.HTTPError from a single upstream 5xx used to abort the whole
+    run before that work happened. This is the boundary: past it, there is
+    exactly one exception type to handle.
+    """
     if not settings.PANDASCORE_API_KEY:
         raise PandaScoreError(
             "PANDASCORE_API_KEY is not set - add it to backend/.env "
             "(see backend/.env.example)."
         )
-    return {"Authorization": f"Bearer {settings.PANDASCORE_API_KEY}"}
+    try:
+        response = requests.get(
+            url,
+            params=params,
+            headers={"Authorization": f"Bearer {settings.PANDASCORE_API_KEY}"},
+            timeout=15,
+        )
+    except requests.RequestException as e:
+        raise PandaScoreError(f"PandaScore request failed: {e}") from e
+
+    if response.status_code == 429:
+        raise PandaScoreError(
+            f"PandaScore rate limit hit (429). Retry-After: "
+            f"{response.headers.get('Retry-After', '?')}s",
+            status_code=429,
+        )
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        raise PandaScoreError(
+            f"PandaScore returned {response.status_code} for {url}",
+            status_code=response.status_code,
+        ) from e
+    try:
+        return response.json()
+    except ValueError as e:
+        raise PandaScoreError(f"PandaScore returned a non-JSON body for {url}") from e
 
 
 def fetch_match(external_id):
@@ -33,20 +71,13 @@ def fetch_match(external_id):
     match needs the match asked for by id, not waited for in the feed.
     Returns the raw match object, or None if PandaScore no longer has it.
     """
-    response = requests.get(
-        f"{PANDASCORE_BASE_URL}/matches/{external_id}",
-        headers=_headers(),
-        timeout=15,
-    )
-    if response.status_code == 404:
-        return None
-    if response.status_code == 429:
-        raise PandaScoreError(
-            f"PandaScore rate limit hit (429). Retry-After: "
-            f"{response.headers.get('Retry-After', '?')}s"
-        )
-    response.raise_for_status()
-    return response.json()
+    try:
+        return _get(f"{PANDASCORE_BASE_URL}/matches/{external_id}")
+    except PandaScoreError as e:
+        # A match the feed no longer knows about is an answer, not a failure.
+        if e.status_code == 404:
+            return None
+        raise
 
 
 def fetch_matches(videogame_slug, status, per_page=50, sort=None):
@@ -65,17 +96,4 @@ def fetch_matches(videogame_slug, status, per_page=50, sort=None):
     }
     if sort:
         params["sort"] = sort
-
-    response = requests.get(
-        f"{PANDASCORE_BASE_URL}/matches",
-        params=params,
-        headers=_headers(),
-        timeout=15,
-    )
-    if response.status_code == 429:
-        raise PandaScoreError(
-            f"PandaScore rate limit hit (429). Retry-After: "
-            f"{response.headers.get('Retry-After', '?')}s"
-        )
-    response.raise_for_status()
-    return response.json()
+    return _get(f"{PANDASCORE_BASE_URL}/matches", params=params)

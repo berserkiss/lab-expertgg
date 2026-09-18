@@ -29,6 +29,10 @@ export interface Match {
   status: 'upcoming' | 'live' | 'finished';
   winner: number | null;
   has_active_bet: boolean;
+  // What a win pays: stake * payout_multiplier + payout_bonus. Sent by the
+  // server so the Vote button quotes the live rule rather than a constant.
+  payout_multiplier: number;
+  payout_bonus: number;
 }
 
 export async function fetchMatches(params: {

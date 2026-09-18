@@ -43,6 +43,11 @@ class MatchSerializer(serializers.ModelSerializer):
     # Drives the "Book" badge on the match card in the Play screen -
     # true when the current user already has an active bet on this match.
     has_active_bet = serializers.SerializerMethodField()
+    # What a winning bet on this match pays: stake * multiplier + bonus.
+    # Sent rather than assumed, so the Vote button quotes the server's rule
+    # instead of a constant compiled into the app months ago.
+    payout_multiplier = serializers.SerializerMethodField()
+    payout_bonus = serializers.SerializerMethodField()
 
     class Meta:
         model = Match
@@ -55,7 +60,19 @@ class MatchSerializer(serializers.ModelSerializer):
             "status",
             "winner",
             "has_active_bet",
+            "payout_multiplier",
+            "payout_bonus",
         )
+
+    def get_payout_multiplier(self, obj):
+        from apps.votes.betting import WIN_MULTIPLIER
+
+        return WIN_MULTIPLIER
+
+    def get_payout_bonus(self, obj):
+        from apps.votes.betting import WIN_BONUS
+
+        return WIN_BONUS
 
     def get_has_active_bet(self, obj):
         user = self.context["request"].user

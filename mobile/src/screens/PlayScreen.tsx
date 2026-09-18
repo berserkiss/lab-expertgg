@@ -31,7 +31,6 @@ const KEY_ROWS = [
   ['1', '2', '3', '4', '5', '6'],
   ['7', '8', '9', '0', '00'],
 ];
-const WIN_BONUS = 2;
 // How often the list (match status/has_active_bet) and balance refresh
 // on their own while this screen is focused, no pull-to-refresh needed -
 // PandaScore's free tier (60 req/min) has plenty of headroom for this.
@@ -229,7 +228,7 @@ export default function PlayScreen({ navigation }: any) {
                         onPress={() => handleVote(item)}
                         disabled={submitting || !selectedTeam || !!validationError}>
                         <Text style={styles.voteTitle}>Vote</Text>
-                        <Text style={styles.voteSubtitle}>win {WIN_BONUS}gg + bonus</Text>
+                        <Text style={styles.voteSubtitle}>win {item.payout_bonus}gg + bonus</Text>
                       </TouchableOpacity>
                     </View>
                   </>

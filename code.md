@@ -408,3 +408,36 @@ gg came from. `manage.py reconcile_wallets` reports the drift and, with
 `--apply`, books the difference as an explicit `adjustment` transaction
 rather than quietly rewriting either side. Run it after any out-of-band
 balance change.
+
+### The bet lifecycle is a set of operations, not side effects
+
+`apps/votes/betting.py` owns everything that moves gg: `place_bet`,
+`settle_match`, `refund_active_votes`, and `payout_for`. Each is an
+ordinary function, so a bet can be placed or settled by a management
+command, a domain test or a background job — not only by an HTTP request
+arriving, or by someone remembering that saving a `Match` has monetary
+consequences.
+
+- `apps/votes/signals.py` is wiring and nothing else: a match reaching a
+  terminal status calls the matching operation.
+- `VoteCreateSerializer` is an HTTP adapter. It translates
+  `BettingError` into a DRF field error and holds no rules of its own.
+- The payout is defined once, in `betting.py`, and **sent to the client**
+  on every match as `payout_multiplier` / `payout_bonus`. The Vote button
+  quotes the server's rule instead of a constant compiled into the app,
+  so changing the payout cannot leave the screen lying.
+
+### The feed is a boundary
+
+`pandascore.py` raises exactly one exception type outward. Previously only
+a missing key and a 429 were wrapped, so any other upstream failure escaped
+as `requests.HTTPError` and aborted the run **before** the settle pass —
+one provider hiccup and nobody got paid that cycle. Every failure now
+arrives as `PandaScoreError` carrying `status_code`, and in the settle pass
+a single unreachable match is skipped rather than ending the pass; only a
+rate limit stops it, since every further request would hit the same wall.
+
+**A fixture is never rewritten under an open bet.** If the feed changes a
+match's opponents while bets are on it, the stored teams stay as they were
+and the change is reported. The teams are what people bet on; swapping them
+underneath a stake is not a data update.

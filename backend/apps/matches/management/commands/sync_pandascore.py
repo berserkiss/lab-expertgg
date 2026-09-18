@@ -8,7 +8,7 @@ from django.utils.dateparse import parse_datetime
 
 from apps.matches.models import Game, Match, Team, Tournament
 from apps.votes.models import Vote
-from apps.votes.signals import refund_active_votes
+from apps.votes.betting import refund_active_votes
 from apps.matches.pandascore import PandaScoreError, fetch_match, fetch_matches
 
 # How long after a match was due to start we keep waiting for the feed to
@@ -79,8 +79,13 @@ class Command(BaseCommand):
             try:
                 raw = fetch_match(match.external_id)
             except PandaScoreError as e:
-                self.stderr.write(self.style.ERROR(str(e)))
-                return
+                # One unreachable match must not cost the others their
+                # settlement; a rate limit is the exception, since every
+                # remaining request would just burn against the same wall.
+                self.stderr.write(self.style.ERROR(f"  match {match.external_id}: {e}"))
+                if e.status_code == 429:
+                    return
+                continue
             if raw is None:
                 self.stdout.write(f"  match {match.external_id}: gone from PandaScore, left as-is")
                 continue
@@ -176,8 +181,21 @@ class Command(BaseCommand):
                 },
             )
             match.tournament = tournament
-            match.team_a = team_a
-            match.team_b = team_b
+            # The teams are what people bet on, so they are not overwritten
+            # under an open bet. A fixture that changes opponents upstream is
+            # a different match in all but id; it is reported rather than
+            # silently swapped beneath the stake.
+            if created or not match.votes.exists():
+                match.team_a = team_a
+                match.team_b = team_b
+            elif match.team_a_id != team_a.id or match.team_b_id != team_b.id:
+                self.stderr.write(
+                    self.style.WARNING(
+                        f"  match {raw['id']}: opponents changed upstream while bets are open "
+                        f"({match.team_a} vs {match.team_b} -> {team_a} vs {team_b}); "
+                        f"keeping the teams the bets were placed on"
+                    )
+                )
             match.start_time = start_time
             match.status = our_status
             if our_status == Match.Status.FINISHED:
