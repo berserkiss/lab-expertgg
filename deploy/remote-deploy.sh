@@ -55,19 +55,34 @@ if command -v docker > /dev/null 2>&1; then
   # under `set -e` a failed command substitution would kill the deploy here.
   DB_CONTAINER=$(docker ps --format '{{.Names}} {{.Image}}' 2>/dev/null | awk '$2 ~ /postgres/ {print $1; exit}') || true
 fi
-if command -v pg_dump > /dev/null 2>&1; then
-  PGPASSWORD="${DB_PASSWORD:-}" pg_dump -Fc -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" > "$DUMP"
-elif [ -n "$DB_CONTAINER" ]; then
-  echo "    through the $DB_CONTAINER container"
-  docker exec -e PGPASSWORD="${DB_PASSWORD:-}" "$DB_CONTAINER" pg_dump -Fc -U "$DB_USER" "$DB_NAME" > "$DUMP"
-else
+# Each is tried in an `if`, which suspends `set -e` for that command, so a
+# path that exists but does not work falls through to the next instead of
+# ending the deploy. Only running out of paths does that.
+BACKED_UP=0
+if [ $BACKED_UP -eq 0 ] && command -v pg_dump > /dev/null 2>&1; then
+  if PGPASSWORD="${DB_PASSWORD:-}" pg_dump -Fc -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$DB_NAME" > "$DUMP"; then
+    BACKED_UP=1
+  else
+    echo "    local pg_dump failed, trying the next way" >&2
+  fi
+fi
+if [ $BACKED_UP -eq 0 ] && [ -n "$DB_CONTAINER" ]; then
+  if docker exec -e PGPASSWORD="${DB_PASSWORD:-}" "$DB_CONTAINER" pg_dump -Fc -U "$DB_USER" "$DB_NAME" > "$DUMP"; then
+    echo "    through the $DB_CONTAINER container"
+    BACKED_UP=1
+  else
+    echo "    pg_dump in $DB_CONTAINER failed, trying the next way" >&2
+  fi
+fi
+if [ $BACKED_UP -eq 0 ]; then
   # Last resort, and it needs nothing installed: Django's own dumpdata,
   # through the venv that is already active. It saves the rows rather than
   # the schema, which is the half that matters - a migration that goes
   # wrong loses balances, not table definitions. Restore with loaddata.
-  echo "    no pg_dump here, falling back to manage.py dumpdata"
+  echo "    no usable pg_dump, falling back to manage.py dumpdata"
+  rm -f "$DUMP"
   DUMP="${DUMP%.dump}.json"
-  python manage.py dumpdata --natural-foreign --natural-primary     --exclude contenttypes --exclude auth.permission --exclude sessions     --output "$DUMP"
+  python manage.py dumpdata --natural-foreign --natural-primary --exclude contenttypes --exclude auth.permission --exclude sessions --output "$DUMP"
 fi
 echo "    $DUMP ($(du -h "$DUMP" | cut -f1))"
 ls -1t "$BACKUP_DIR"/* | tail -n "+$((KEEP_BACKUPS + 1))" | xargs -r rm --
