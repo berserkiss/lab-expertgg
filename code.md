@@ -441,3 +441,23 @@ rate limit stops it, since every further request would hit the same wall.
 match's opponents while bets are on it, the stored teams stay as they were
 and the change is reported. The teams are what people bet on; swapping them
 underneath a stake is not a data update.
+
+### Running the tests
+
+Locally, from `backend/` with the virtualenv active:
+
+```
+python manage.py test
+```
+
+They need Postgres reachable — the same `lab-expertgg-db` container local
+development uses. Django creates and drops its own `test_*` database, so a
+run never touches development data.
+
+Both pipelines now run the suite as a `test` stage and only deploy if it
+passes (`needs: test` on GitHub, a `test` stage before `deploy` on GitLab),
+each against a throwaway Postgres service. The suite covers the payout
+maths and the wallet's behaviour under concurrent bets; a deploy that
+migrates a money ledger is the wrong moment to discover a test was already
+red. That is not hypothetical here: a stale test had been failing unnoticed
+because nothing ran it.

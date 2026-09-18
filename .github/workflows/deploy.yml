@@ -8,8 +8,47 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  # The suite covers the payout maths and the concurrency around the wallet,
+  # so it runs before anything reaches the droplet - a deploy that migrates a
+  # money ledger is not the place to find out a test was already red.
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: lab_expertgg
+          POSTGRES_USER: lab_expertgg
+          POSTGRES_PASSWORD: devpassword
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      SECRET_KEY: ci-secret-not-used-anywhere-else
+      DB_HOST: localhost
+      DB_NAME: lab_expertgg
+      DB_USER: lab_expertgg
+      DB_PASSWORD: devpassword
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -q -r requirements.txt
+      - name: Run tests
+        working-directory: backend
+        run: python manage.py test --verbosity 2
+
   deploy:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Deploy over SSH
         env:

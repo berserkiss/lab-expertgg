@@ -1,5 +1,32 @@
 stages:
+  - test
   - deploy
+
+# Same gate as the GitHub pipeline: nothing reaches the droplet until the
+# payout and wallet-concurrency tests have passed.
+test_backend:
+  stage: test
+  image: python:3.13
+  services:
+    - name: postgres:16
+      alias: postgres
+  variables:
+    POSTGRES_DB: lab_expertgg
+    POSTGRES_USER: lab_expertgg
+    POSTGRES_PASSWORD: devpassword
+    SECRET_KEY: ci-secret-not-used-anywhere-else
+    DB_HOST: postgres
+    DB_NAME: lab_expertgg
+    DB_USER: lab_expertgg
+    DB_PASSWORD: devpassword
+  rules:
+    - changes:
+        - backend/**/*
+  before_script:
+    - cd backend
+    - pip install -q -r requirements.txt
+  script:
+    - python manage.py test --verbosity 2
 
 deploy_backend:
   stage: deploy
