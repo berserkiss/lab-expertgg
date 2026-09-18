@@ -1,0 +1,3 @@
+# Runs on the droplet, so it must keep LF endings whatever the checkout
+# platform does - CRLF makes bash fail on the shebang line.
+*.sh text eol=lf
