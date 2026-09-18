@@ -26,7 +26,10 @@ class MatchListView(generics.ListAPIView):
         qs = (
             Match.objects.select_related("tournament__game", "team_a", "team_b")
             .exclude(status__in=[Match.Status.FINISHED, Match.Status.CANCELED])
-            .order_by("start_time")
+            # id breaks ties: dozens of matches share a start_time, and a sort that
+            # is not unique lets Postgres order ties differently per query - which
+            # with pagination shows some rows twice and hides others entirely.
+            .order_by("start_time", "id")
         )
 
         game_slug = self.request.query_params.get("game")

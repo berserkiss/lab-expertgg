@@ -1,45 +1,91 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import { Paginated } from '../api/client';
 
 // Shared by every screen that fetches a list on focus (Play/History/
 // Leaderboard) - re-fetches every time the screen comes into focus, tracks
-// its own loading/error state, and exposes reload() for pull-to-refresh.
+// its own loading/error state, exposes reload() for pull-to-refresh, and
+// loadMore() for the rest of the rows.
+//
+// The list is paginated server-side, so the first response is a page, not
+// the list. Screens hand loadMore to FlatList's onEndReached; without it a
+// list silently stops at PAGE_SIZE rows and looks complete.
 //
 // fetcher is kept in a ref rather than a useCallback dependency, so callers
-// can pass a fresh inline function on every render (e.g. `() =>
-// fetchMatches({})`) without that alone re-triggering a fetch - only an
-// actual screen focus does.
+// can pass a fresh inline function on every render (e.g. `pageUrl =>
+// fetchMatches({}, pageUrl)`) without that alone re-triggering a fetch -
+// only an actual screen focus does.
 //
 // Pass pollMs to also re-fetch on a timer while the screen stays focused,
-// so match status/bet outcomes/leaderboard positions update on their own -
-// no pull-to-refresh or navigating away and back needed to see fresh data.
-export function useFetchList<T>(fetcher: () => Promise<T[]>, pollMs?: number) {
+// so match status/bet outcomes/leaderboard positions update on their own.
+export function useFetchList<T>(
+  fetcher: (pageUrl?: string) => Promise<Paginated<T>>,
+  pollMs?: number,
+) {
   const [items, setItems] = useState<T[]>([]);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
+  const nextUrl = useRef<string | null>(null);
+  // A ref, not the loadingMore state: FlatList fires onEndReached several
+  // times in a fast scroll, and state set in one of those calls is not
+  // visible to the next one in the same tick - both would fetch the same
+  // page and append it twice.
+  const fetchingMore = useRef(false);
+  // Tracks whether the user has paged past the first screenful, so a poll
+  // tick doesn't yank rows out from under them (see silentReload).
+  const pagedFurther = useRef(false);
 
   const reload = useCallback(() => {
     setLoading(true);
     return fetcherRef
       .current()
-      .then(data => {
-        setItems(data);
+      .then(page => {
+        setItems(page.results);
+        nextUrl.current = page.next;
+        pagedFurther.current = false;
         setError(false);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
   }, []);
 
+  const loadMore = useCallback(() => {
+    const url = nextUrl.current;
+    if (!url || fetchingMore.current) return;
+    fetchingMore.current = true;
+    setLoadingMore(true);
+    fetcherRef
+      .current(url)
+      .then(page => {
+        setItems(prev => [...prev, ...page.results]);
+        nextUrl.current = page.next;
+        pagedFurther.current = true;
+      })
+      .catch(() => {
+        // The rows already on screen are still good; the next scroll to the
+        // end retries.
+      })
+      .finally(() => {
+        fetchingMore.current = false;
+        setLoadingMore(false);
+      });
+  }, []);
+
   // Same reasoning as reload() above - a background poll tick shouldn't
-  // flash the full-screen loading state on every refetch.
+  // flash the full-screen loading state on every refetch. It also refuses
+  // to run once the user has loaded further pages, since replacing the list
+  // with page one would throw away what they scrolled to.
   const silentReload = useCallback(() => {
+    if (pagedFurther.current) return Promise.resolve();
     return fetcherRef
       .current()
-      .then(data => {
-        setItems(data);
+      .then(page => {
+        setItems(page.results);
+        nextUrl.current = page.next;
         setError(false);
       })
       .catch(() => {
@@ -60,5 +106,5 @@ export function useFetchList<T>(fetcher: () => Promise<T[]>, pollMs?: number) {
     }, [reload, silentReload, pollMs]),
   );
 
-  return { items, error, loading, reload };
+  return { items, error, loading, loadingMore, reload, loadMore };
 }

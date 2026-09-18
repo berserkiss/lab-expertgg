@@ -35,12 +35,17 @@ export interface Match {
   payout_bonus: number;
 }
 
-export async function fetchMatches(params: {
-  game?: string;
-  range?: 'today' | 'tomorrow' | 'week';
-}) {
-  const { data } = await apiClient.get<Paginated<Match>>('/matches/', { params });
-  return data.results;
+// Returns the whole page, not just its rows: the caller needs `next` to be
+// able to ask for the rest. `pageUrl` is one of those links, handed straight
+// back to the server.
+export async function fetchMatches(
+  params: { game?: string; range?: 'today' | 'tomorrow' | 'week' },
+  pageUrl?: string,
+) {
+  const { data } = await apiClient.get<Paginated<Match>>(pageUrl ?? '/matches/', {
+    params: pageUrl ? undefined : params,
+  });
+  return data;
 }
 
 export async function fetchMatch(id: number) {

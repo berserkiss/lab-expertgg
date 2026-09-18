@@ -11,9 +11,9 @@ export interface VoteHistoryItem {
   created_at: string;
 }
 
-export async function fetchHistory() {
-  const { data } = await apiClient.get<Paginated<VoteHistoryItem>>('/votes/history/');
-  return data.results;
+export async function fetchHistory(pageUrl?: string) {
+  const { data } = await apiClient.get<Paginated<VoteHistoryItem>>(pageUrl ?? '/votes/history/');
+  return data;
 }
 
 export interface LeaderboardEntry {
@@ -22,7 +22,7 @@ export interface LeaderboardEntry {
   balance: number;
 }
 
-export async function fetchLeaderboard() {
-  const { data } = await apiClient.get<Paginated<LeaderboardEntry>>('/leaderboard/');
-  return data.results;
+export async function fetchLeaderboard(pageUrl?: string) {
+  const { data } = await apiClient.get<Paginated<LeaderboardEntry>>(pageUrl ?? '/leaderboard/');
+  return data;
 }

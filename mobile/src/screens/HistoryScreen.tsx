@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
 import { useFetchList } from '../hooks/useFetchList';
+import ListFooter from '../components/ListFooter';
 import { fetchHistory } from '../api/votes';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
@@ -17,7 +18,10 @@ import { typography } from '../theme/typography';
 const POLL_MS = 15000;
 
 export default function HistoryScreen() {
-  const { items, error, loading, reload } = useFetchList(fetchHistory, POLL_MS);
+  const { items, error, loading, loadingMore, reload, loadMore } = useFetchList(
+    fetchHistory,
+    POLL_MS,
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -37,6 +41,9 @@ export default function HistoryScreen() {
           keyExtractor={i => String(i.id)}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => <BetCard item={item} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={<ListFooter loading={loadingMore} />}
         />
       )}
     </SafeAreaView>

@@ -47,8 +47,8 @@ export default function BalanceBadge() {
 }
 
 const styles = StyleSheet.create({
-  // The frame sets the bag almost against the number, not a comfortable
-  // label-and-icon gap away from it.
-  container: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  // The frame sets the bag almost against the number and sits the number on
+  // the bag's bottom edge, rather than centring the two against each other.
+  container: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
   balance: { color: colors.text, fontFamily: fonts.medium, fontSize: typography.label.fontSize },
 });

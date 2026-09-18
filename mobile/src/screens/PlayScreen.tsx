@@ -12,6 +12,7 @@ import BalanceBadge from '../components/BalanceBadge';
 import ConfirmationModal from '../components/ConfirmationModal';
 import TeamBox, { VS_COLUMN_WIDTH } from '../components/TeamBox';
 import EmptyState from '../components/EmptyState';
+import ListFooter from '../components/ListFooter';
 import ErrorState from '../components/ErrorState';
 import LoadingState from '../components/LoadingState';
 import { useAuth } from '../context/AuthContext';
@@ -43,8 +44,15 @@ const CONFIRMATION_MS = 2500;
 // tabsRow/rangeRow UI once the design comes back for them.
 export default function PlayScreen({ navigation }: any) {
   const { user, refreshUser } = useAuth();
-  const fetchAllMatches = useCallback(() => fetchMatches({}), []);
-  const { items: matches, error, loading, reload } = useFetchList(fetchAllMatches, POLL_MS);
+  const fetchAllMatches = useCallback((pageUrl?: string) => fetchMatches({}, pageUrl), []);
+  const {
+    items: matches,
+    error,
+    loading,
+    loadingMore,
+    reload,
+    loadMore,
+  } = useFetchList(fetchAllMatches, POLL_MS);
   const [refreshing, setRefreshing] = useState(false);
   const now = useNow(1000);
 
@@ -142,6 +150,9 @@ export default function PlayScreen({ navigation }: any) {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text} />
           }
           contentContainerStyle={styles.list}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={<ListFooter loading={loadingMore} />}
           renderItem={({ item }) => {
             const isExpanded = item.id === expandedId;
             return (

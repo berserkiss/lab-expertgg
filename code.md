@@ -461,3 +461,23 @@ maths and the wallet's behaviour under concurrent bets; a deploy that
 migrates a money ledger is the wrong moment to discover a test was already
 red. That is not hypothetical here: a stale test had been failing unnoticed
 because nothing ran it.
+
+### Lists are paginated, and their order has to be unique
+
+`PAGE_SIZE` is 20, and the app used to take `results` and drop `next` — so
+Play, History and the leaderboard silently showed the first twenty rows and
+looked complete. The list fetchers now return the whole page, `useFetchList`
+exposes `loadMore()`, and Play and History hand it to `onEndReached`. A poll
+tick refuses to run once the user has paged further, so a background refresh
+cannot yank away what they scrolled to.
+
+The leaderboard is served whole instead: it is a top 100 by definition, and
+the screen scrolls straight to the logged-in player's row, which paging
+would hide behind a scroll they have to know to perform.
+
+**Every paginated list orders by something unique.** `start_time` alone is
+not: 83 matches here share 27 distinct start times, up to nine at the same
+instant, and Postgres may order ties differently per query — so page two
+repeated rows from page one and skipped others entirely. Each list now
+carries `id` as a tiebreak. Ordering is part of pagination being correct,
+not a display preference.

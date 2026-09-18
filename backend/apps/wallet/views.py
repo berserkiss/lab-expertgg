@@ -17,7 +17,7 @@ AD_REWARD_AMOUNT = 250
 def _cooldown_status(wallet):
     last = (
         wallet.transactions.filter(type=CoinTransaction.Type.AD_REWARD)
-        .order_by("-created_at")
+        .order_by("-created_at", "-id")
         .first()
     )
     if last is None:
