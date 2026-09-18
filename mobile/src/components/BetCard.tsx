@@ -6,8 +6,15 @@ import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
 
-const STATUS_LABEL: Record<string, string> = { win: 'Win', lose: 'Lose', active: 'Active' };
-const STATUS_COLOR: Record<string, string> = { win: colors.win, lose: colors.lose, active: colors.active };
+const STATUS_LABEL: Record<string, string> = { win: 'Win', lose: 'Lose', active: 'Active', void: 'Void' };
+// A voided bet neither won nor lost, so it takes the neutral outline
+// rather than one of the three result colours.
+const STATUS_COLOR: Record<string, string> = {
+  win: colors.win,
+  lose: colors.lose,
+  active: colors.active,
+  void: colors.teamButtonBorder,
+};
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function formatPlaced(iso: string) {

@@ -9,6 +9,8 @@ class Vote(models.Model):
         ACTIVE = "active", "Active"
         WIN = "win", "Win"
         LOSE = "lose", "Lose"
+        # The match was voided upstream; the stake went back to the wallet.
+        VOID = "void", "Void"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="votes")
     match = models.ForeignKey(Match, on_delete=models.CASCADE, related_name="votes")

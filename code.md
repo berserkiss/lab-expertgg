@@ -360,9 +360,22 @@ that still carries an active vote and is not yet finished is fetched from
 PandaScore **by id** and re-synced. That is one request per match with
 money on it, so it stays cheap.
 
-Known gap: a match PandaScore cancels or postpones maps to no local status,
-so it is skipped and its bet stays active with the stake held. Refunding a
-voided match is not implemented.
+A voided match refunds. `canceled` maps to `Match.Status.CANCELED`, a
+terminal status with no winner, and saving a match into it fires
+`void_votes_on_match_canceled`: every active vote on it goes to
+`Vote.Status.VOID` and its stake is credited back as a `bet_refund`
+transaction. Both resolution paths only ever touch votes still in `ACTIVE`,
+which is what stops a repeated sync of the same match from paying out or
+refunding twice. `postponed` is not terminal — the match is still going to
+be played, so it stays `UPCOMING` and simply picks up its new start time.
+Canceled matches are excluded from the Play list alongside finished ones.
+
+**Scheduling is part of the system, not an afterthought.** `deploy/`
+carries a systemd service + timer that runs the sync every 10 minutes, and
+`deploy/README.md` has the one-time install. The interval is the worst-case
+delay between a match ending and the wallet seeing the payout. CI does not
+install these — the deploy job only updates code, migrates and restarts —
+so it is one manual step per server.
 
 ### Status and result colours
 

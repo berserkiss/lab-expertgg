@@ -41,6 +41,9 @@ class Match(models.Model):
         UPCOMING = "upcoming", "Upcoming"
         LIVE = "live", "Live"
         FINISHED = "finished", "Finished"
+        # A match the feed voided. Terminal, like FINISHED, but with no
+        # winner - bets on it are refunded rather than settled.
+        CANCELED = "canceled", "Canceled"
 
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name="matches")
     team_a = models.ForeignKey(Team, on_delete=models.CASCADE, related_name="matches_as_a")

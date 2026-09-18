@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync matches from PandaScore and settle bets on finished matches
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/lab-expertgg/backend
+ExecStart=/root/lab-expertgg/backend/venv/bin/python manage.py sync_pandascore

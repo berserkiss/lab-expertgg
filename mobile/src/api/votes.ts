@@ -6,7 +6,7 @@ export interface VoteHistoryItem {
   match: Match;
   predicted_team: Team;
   stake: number;
-  status: 'active' | 'win' | 'lose';
+  status: 'active' | 'win' | 'lose' | 'void';
   amount: number;
   created_at: string;
 }

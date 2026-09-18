@@ -36,6 +36,7 @@ class CoinTransaction(models.Model):
         BET_STAKE = "bet_stake", "Bet stake"
         BET_WIN = "bet_win", "Bet win"
         BET_LOSE = "bet_lose", "Bet lose"
+        BET_REFUND = "bet_refund", "Bet refund"
         AD_REWARD = "ad_reward", "Ad reward"
         SIGNUP_BONUS = "signup_bonus", "Signup bonus"
 

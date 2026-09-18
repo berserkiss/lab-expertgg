@@ -33,3 +33,26 @@ def resolve_votes_on_match_finished(sender, instance, **kwargs):
                 vote.payout = 0
                 wallet.transactions.create(amount=0, type=CoinTransaction.Type.BET_LOSE, related_vote=vote)
             vote.save(update_fields=["status", "payout"])
+
+
+@receiver(post_save, sender=Match)
+def void_votes_on_match_canceled(sender, instance, **kwargs):
+    """
+    Give the stake back when the feed voids a match.
+
+    A canceled match has no winner, so it can never settle through
+    resolve_votes_on_match_finished - without this the bet would hold its
+    stake as 'active' for good. Filtering on ACTIVE is what keeps a repeated
+    sync of the same canceled match from refunding twice.
+    """
+    if instance.status != Match.Status.CANCELED:
+        return
+
+    with transaction.atomic():
+        votes = list(instance.votes.select_for_update().filter(status=Vote.Status.ACTIVE))
+        for vote in votes:
+            wallet = Wallet.objects.select_for_update().get(user_id=vote.user_id)
+            wallet.credit(vote.stake, CoinTransaction.Type.BET_REFUND, related_vote=vote)
+            vote.status = Vote.Status.VOID
+            vote.payout = vote.stake
+            vote.save(update_fields=["status", "payout"])

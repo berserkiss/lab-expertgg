@@ -1,0 +1,14 @@
+[Unit]
+Description=Run the PandaScore sync every 10 minutes
+
+[Timer]
+# Soon after boot, then every 10 minutes. A bet cannot pay out until this
+# runs, so the interval is the worst-case delay between a match ending and
+# the wallet seeing the payout. PandaScore's free tier allows 60 req/min,
+# well clear of 4 requests per run.
+OnBootSec=2min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

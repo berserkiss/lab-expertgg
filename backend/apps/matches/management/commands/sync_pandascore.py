@@ -11,9 +11,10 @@ STATUS_MAP = {
     "not_started": Match.Status.UPCOMING,
     "running": Match.Status.LIVE,
     "finished": Match.Status.FINISHED,
-    # canceled/postponed have no equivalent Match.Status - skipped entirely,
-    # see _sync_one. A match that goes stale this way (already upcoming
-    # locally, then canceled upstream) is a known gap for Simplified 2.
+    "canceled": Match.Status.CANCELED,
+    # A postponed match is still going to be played, so it stays bettable and
+    # simply picks up whatever new begin_at the feed carries.
+    "postponed": Match.Status.UPCOMING,
 }
 
 
@@ -53,7 +54,7 @@ class Command(BaseCommand):
         """
         pending = (
             Match.objects.filter(votes__status=Vote.Status.ACTIVE)
-            .exclude(status=Match.Status.FINISHED)
+            .exclude(status__in=[Match.Status.FINISHED, Match.Status.CANCELED])
             .exclude(external_id=None)
             .distinct()
         )
@@ -100,7 +101,7 @@ class Command(BaseCommand):
 
         our_status = STATUS_MAP.get(raw.get("status"))
         if our_status is None:
-            return "skip"  # canceled/postponed - not modeled
+            return "skip"  # a status we do not model
 
         start_time = parse_datetime(raw.get("begin_at") or raw.get("scheduled_at") or "")
         if not start_time:

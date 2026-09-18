@@ -25,7 +25,7 @@ class MatchListView(generics.ListAPIView):
         # already-finished ones alongside upcoming/live).
         qs = (
             Match.objects.select_related("tournament__game", "team_a", "team_b")
-            .exclude(status=Match.Status.FINISHED)
+            .exclude(status__in=[Match.Status.FINISHED, Match.Status.CANCELED])
             .order_by("start_time")
         )
 
