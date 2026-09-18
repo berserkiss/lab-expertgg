@@ -39,6 +39,10 @@ class CoinTransaction(models.Model):
         BET_REFUND = "bet_refund", "Bet refund"
         AD_REWARD = "ad_reward", "Ad reward"
         SIGNUP_BONUS = "signup_bonus", "Signup bonus"
+        # Written only by the reconcile_wallets command, to account for
+        # balance set outside credit()/debit() - a seeded or admin-edited
+        # balance leaves no transaction behind on its own.
+        ADJUSTMENT = "adjustment", "Adjustment"
 
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name="transactions")
     amount = models.IntegerField()

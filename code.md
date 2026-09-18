@@ -388,3 +388,14 @@ the status colour.
 
 Grey `#EBEBE9` body carrying dark − and + glyphs, with the amount itself on
 a plain white field between them — not a dark control with light glyphs.
+
+### The ledger has to explain the balance
+
+`Wallet.balance` is denormalised, and `credit()`/`debit()` are the only
+writers that also record a `CoinTransaction`. Anything that sets a balance
+around them — seeding, an edit in the admin — leaves the ledger no longer
+summing to the balance, which makes it useless for auditing where a user's
+gg came from. `manage.py reconcile_wallets` reports the drift and, with
+`--apply`, books the difference as an explicit `adjustment` transaction
+rather than quietly rewriting either side. Run it after any out-of-band
+balance change.
