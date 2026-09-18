@@ -82,9 +82,9 @@ export default function GetCoinsScreen({ navigation }: any) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
           <BackArrowIcon width={12} height={21} />
         </TouchableOpacity>
-        <Text style={styles.title} pointerEvents="none">
-          Get coins
-        </Text>
+        <View style={styles.titleWrap} pointerEvents="none">
+          <Text style={styles.title}>Get coins</Text>
+        </View>
         <BalanceBadge />
       </View>
       <View style={styles.body}>
@@ -132,11 +132,12 @@ const styles = StyleSheet.create({
   // Absolutely centered on the header regardless of how wide the back
   // button or BalanceBadge (balance digits vary) end up - a plain flex
   // row with space-between would only center it between them, not on
-  // the screen.
+  // the screen. It spans the full header width, so it has to be a View
+  // with pointerEvents="none": on a Text that prop does nothing, and the
+  // title then silently swallows every tap on the back arrow and badge
+  // underneath it.
+  titleWrap: { position: 'absolute', left: 0, right: 0 },
   title: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
     textAlign: 'center',
     color: colors.text,
     fontSize: typography.h4.fontSize,

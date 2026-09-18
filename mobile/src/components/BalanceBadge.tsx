@@ -14,9 +14,9 @@ const POLL_MS = 15000;
 
 // Shown in every main-tab screen's header, next to the title - matches the
 // Figma header row on Play/History/Leaderboard/Account/Get coins. Tapping it
-// (the wallet icon includes the "+" badge) opens Get Coins, which lives
-// under the Account tab's stack - useNavigation() (rather than a prop) is
-// what lets this work from every tab, not just Account's own screens.
+// (the wallet icon includes the "+" badge) pushes Get coins onto whichever
+// tab's stack is showing, so its back arrow returns here; useNavigation()
+// (rather than a prop) is what lets this work from every tab.
 export default function BalanceBadge() {
   const { user, refreshUser } = useAuth();
   const navigation = useNavigation<any>();
@@ -31,7 +31,7 @@ export default function BalanceBadge() {
   return (
     <TouchableOpacity
       style={styles.container}
-      onPress={() => navigation.navigate('Account', { screen: 'GetCoins' })}>
+      onPress={() => navigation.navigate('GetCoins')}>
       <Text style={styles.balance}>{user?.balance ?? 0} gg</Text>
       <WalletIcon width={25} height={24} />
     </TouchableOpacity>

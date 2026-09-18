@@ -1,10 +1,12 @@
 import React from 'react';
 import { Text } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import AccountStack from './AccountStack';
-import PlayStack from './PlayStack';
+import { makeTabStack } from './tabStack';
+import AccountScreen from '../screens/AccountScreen';
+import BookScreen from '../screens/BookScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
+import PlayScreen from '../screens/PlayScreen';
 import SwordsIcon from '../assets/nav/swords.svg';
 import ListIcon from '../assets/nav/list.svg';
 import TrophyIcon from '../assets/nav/trophy.svg';
@@ -14,6 +16,11 @@ import { fonts } from '../theme/fonts';
 import { typography } from '../theme/typography';
 
 const Tab = createBottomTabNavigator();
+
+const PlayStack = makeTabStack([['PlayHome', PlayScreen], ['Book', BookScreen]]);
+const HistoryStack = makeTabStack([['HistoryHome', HistoryScreen]]);
+const LeaderboardStack = makeTabStack([['LeaderboardHome', LeaderboardScreen]]);
+const AccountStack = makeTabStack([['AccountHome', AccountScreen]]);
 
 const ICONS: Record<string, React.FC<{ width: number; height: number; color: string }>> = {
   Play: SwordsIcon,
@@ -52,8 +59,8 @@ export default function MainTabs() {
         },
       })}>
       <Tab.Screen name="Play" component={PlayStack} />
-      <Tab.Screen name="History" component={HistoryScreen} />
-      <Tab.Screen name="Leaderboard" component={LeaderboardScreen} options={{ title: 'Leaders' }} />
+      <Tab.Screen name="History" component={HistoryStack} />
+      <Tab.Screen name="Leaderboard" component={LeaderboardStack} options={{ title: 'Leaders' }} />
       <Tab.Screen name="Account" component={AccountStack} />
     </Tab.Navigator>
   );
