@@ -295,21 +295,22 @@ const styles = StyleSheet.create({
     fontFamily: fonts.regular,
   },
   stakeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 12 },
+  // A light control, not a dark one: grey body carrying the - and + glyphs,
+  // with the amount itself on a plain white field between them.
   stepperGroup: {
     flexDirection: 'row',
     alignItems: 'stretch',
     height: 40,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: colors.stepperBody,
     borderRadius: 8,
     overflow: 'hidden',
   },
   stepperButton: { paddingHorizontal: 12, justifyContent: 'center' },
-  stepper: { color: colors.text, fontSize: typography.h3.fontSize, fontFamily: fonts.medium },
+  stepper: { color: colors.background, fontSize: typography.h3.fontSize, fontFamily: fonts.medium },
   // Fills the group's height so it reads as an inset input field, the way the
   // frame draws it - a floating rounded box leaves dark gaps above and below.
   stakeField: {
-    backgroundColor: colors.inputField,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     paddingHorizontal: 12,
     minWidth: 76,

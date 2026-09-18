@@ -6,7 +6,7 @@ export const colors = {
   cardBorder: '#22305C',
   navBackground: '#191B28',
   border: 'rgba(255,255,255,0.14)',
-  inputField: '#EBEBE9',
+  stepperBody: '#EBEBE9',
   navIconActive: '#FFFFFF',
   navIconInactive: '#666C7C',
   primary: '#0166FE',

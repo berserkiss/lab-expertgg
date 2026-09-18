@@ -341,3 +341,37 @@ a list of 16pt padding, and `[box flex:1][28pt][box flex:1]`. Play draws
 "VS" in that 28pt middle column; History leaves it empty. Fixing the
 column's width rather than letting "VS" measure itself is what keeps the
 boxes the same width on a screen that draws no VS.
+
+### Who settles a bet
+
+Nothing settles a bet on its own. The payout signal
+(`apps/votes/signals.py`) fires on `Match.post_save`, and the only thing
+that ever saves a match as finished is the `sync_pandascore` command. So a
+bet resolves exactly when that command runs — there is no scheduler, no
+celery, no cron. **The command has to be run (by hand or from a cron
+entry) for bets to pay out at all.**
+
+Running the feed sync is not enough by itself. The feed endpoints return a
+recency window (one page, `finished` sorted by `-end_at`), so a match that
+finished more than a page of results ago never comes back through them —
+the bet on it would hold its stake as `active` forever no matter how often
+the sync ran. The command therefore ends with a settle pass: every match
+that still carries an active vote and is not yet finished is fetched from
+PandaScore **by id** and re-synced. That is one request per match with
+money on it, so it stays cheap.
+
+Known gap: a match PandaScore cancels or postpones maps to no local status,
+so it is skipped and its bet stays active with the stake held. Refunding a
+voided match is not implemented.
+
+### Status and result colours
+
+Win `#12CC46`, Lose `#FF383C`, Active `#F5A623` — used as the *outline* of
+the status badge with matching text. The result badge at the bottom of a
+history row is different: a neutral `#666C7C` outline with only its text in
+the status colour.
+
+### The stake stepper is a light control
+
+Grey `#EBEBE9` body carrying dark − and + glyphs, with the amount itself on
+a plain white field between them — not a dark control with light glyphs.

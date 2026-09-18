@@ -4,7 +4,8 @@ from django.db import transaction
 from django.utils.dateparse import parse_datetime
 
 from apps.matches.models import Game, Match, Team, Tournament
-from apps.matches.pandascore import PandaScoreError, fetch_matches
+from apps.votes.models import Vote
+from apps.matches.pandascore import PandaScoreError, fetch_match, fetch_matches
 
 STATUS_MAP = {
     "not_started": Match.Status.UPCOMING,
@@ -37,6 +38,41 @@ class Command(BaseCommand):
                 ("finished", "-end_at"),
             ):
                 self._sync_status(slug, status, sort)
+
+        self._settle_open_bets()
+
+    def _settle_open_bets(self):
+        """
+        Settle matches that still carry an unresolved bet.
+
+        The feed endpoints only return a recency window, so a match that
+        finished more than a page ago never comes back through them - the bet
+        on it would sit 'active' forever, holding the stake, however often the
+        sync runs. These are asked for by id instead, which is cheap: it is
+        one request per match that actually has money on it.
+        """
+        pending = (
+            Match.objects.filter(votes__status=Vote.Status.ACTIVE)
+            .exclude(status=Match.Status.FINISHED)
+            .exclude(external_id=None)
+            .distinct()
+        )
+        if not pending:
+            return
+
+        self.stdout.write(f"Settling {len(pending)} match(es) with open bets...")
+        for match in pending:
+            try:
+                raw = fetch_match(match.external_id)
+            except PandaScoreError as e:
+                self.stderr.write(self.style.ERROR(str(e)))
+                return
+            if raw is None:
+                self.stdout.write(f"  match {match.external_id}: gone from PandaScore, left as-is")
+                continue
+            slug = (raw.get("videogame") or {}).get("slug") or match.tournament.game.slug
+            result = self._sync_one(raw, slug)
+            self.stdout.write(f"  match {match.external_id}: {raw.get('status')} -> {result}")
 
     def _sync_status(self, slug, status, sort):
         try:

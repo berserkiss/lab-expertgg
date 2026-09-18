@@ -48,7 +48,7 @@ export default function BetCard({ item }: { item: VoteHistoryItem }) {
 
       <View style={styles.row}>
         <Text style={styles.muted}>{formatPlaced(item.created_at)}</Text>
-        <View style={[styles.badge, { borderColor: statusColor }]}>
+        <View style={styles.amountBadge}>
           <Text style={[styles.badgeText, { color: statusColor }]}>
             {formatAmount(item.amount, item.status)}
           </Text>
@@ -67,6 +67,15 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   badge: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 3 },
+  // The status badge is outlined in its own colour; the result badge is not -
+  // it takes the neutral outline and carries the colour in its text only.
+  amountBadge: {
+    borderWidth: 1,
+    borderColor: colors.teamButtonBorder,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 3,
+  },
   badgeText: { fontSize: typography.small.fontSize, fontFamily: fonts.semiBold },
   muted: {
     color: colors.textGray,
