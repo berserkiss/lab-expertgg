@@ -295,6 +295,10 @@ const styles = StyleSheet.create({
   vs: {
     width: VS_COLUMN_WIDTH,
     textAlign: 'center',
+    // The row stretches its children to full height; a Text that stretches
+    // still draws its glyph at the top of that box, so this one opts out and
+    // centres itself against the team boxes instead.
+    alignSelf: 'center',
     color: colors.text,
     fontFamily: fonts.medium,
     fontSize: typography.h4.fontSize,
